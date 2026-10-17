@@ -26,7 +26,8 @@
 .banner a:hover, .banner a:focus-visible { color: var(--ink); }
 
 /* Stage: a square board centred in the space below the banner */
-.stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 12px; overflow: hidden; }
+/* Room is kept under the board for the emotion panel, so it never covers the map. */
+.stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px 12px 224px; overflow: hidden; }
 
 /* Page-wide glow in the quadrant colours, brightest at the page edges (CSS conic angles run clockwise from the top). */
 .page-glow {
@@ -34,8 +35,10 @@
   background: conic-gradient(from 0deg at var(--cx, 50%) var(--cy, 50%),
     #f6b93b 0deg, #f6b93b 30deg, #31c9a3 120deg, #31c9a3 150deg,
     #5b8cff 210deg, #5b8cff 240deg, #f0604d 300deg, #f0604d 330deg, #f6b93b 360deg);
-  -webkit-mask-image: radial-gradient(farthest-corner at var(--cx, 50%) var(--cy, 50%), transparent 46%, rgba(0, 0, 0, 0.25) 66%, rgba(0, 0, 0, 0.75) 82%, #000 96%);
-  mask-image: radial-gradient(farthest-corner at var(--cx, 50%) var(--cy, 50%), transparent 46%, rgba(0, 0, 0, 0.25) 66%, rgba(0, 0, 0, 0.75) 82%, #000 96%);
+  /* Radiates out from the centre of the map and fades well before the edges; a small clear spot
+     in the middle keeps it off the light and the centre labels. */
+  -webkit-mask-image: radial-gradient(circle var(--bh, 40vh) at var(--cx, 50%) var(--cy, 50%), transparent 6%, #000 22%, rgba(0, 0, 0, 0.5) 52%, transparent 100%);
+  mask-image: radial-gradient(circle var(--bh, 40vh) at var(--cx, 50%) var(--cy, 50%), transparent 6%, #000 22%, rgba(0, 0, 0, 0.5) 52%, transparent 100%);
   opacity: 0.13;
 }
 
@@ -54,11 +57,11 @@
 .end-right { right: 18px; top: calc(var(--cy, 50%) + 12px); }
 .end-left { left: 18px; top: calc(var(--cy, 50%) + 12px); }
 .end-top { top: 14px; left: calc(var(--cx, 50%) + 12px); }
-.end-bottom { bottom: 14px; left: calc(var(--cx, 50%) + 12px); }
+.end-bottom { top: calc(var(--cy, 50%) + var(--bh, 40vh) - 28px); left: calc(var(--cx, 50%) + 12px); }
 .board {
   position: relative;
   flex: none;
-  width: min(100%, calc(100dvh - 44px - 24px));
+  width: min(100%, calc(100dvh - 44px - 232px));
   aspect-ratio: 1;
 }
 
@@ -182,7 +185,7 @@
 
 /* Dock: a cutout in the lower middle of the board; the field's lines and glow stop at its edge. */
 .dock {
-  position: absolute; left: 50%; bottom: 2.5%; transform: translateX(-50%); z-index: 4;
+  position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); z-index: 4;
   width: min(440px, 88%);
   display: flex; flex-direction: column; align-items: center; gap: 0;
   padding: 14px 20px; border-radius: 28px;
@@ -249,8 +252,8 @@
 /* Song card */
 /* The song card is the star: centred over the map, above the emotion panel. */
 .card {
-  position: absolute; left: 50%; top: 44%; z-index: 5;
-  width: min(640px, calc(100% - 32px));
+  position: absolute; left: 50%; top: 50%; z-index: 5;
+  width: min(640px, calc(100% - 32px)); max-height: calc(100% - 24px); overflow-y: auto;
   translate: -50% -50%;
   padding: 26px; border-radius: 28px;
   background: var(--card); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
@@ -310,9 +313,9 @@
 
 /* Tall, narrow screens: the board fills the width and the dock sits under it instead of inside it. */
 @media (max-aspect-ratio: 4/5) {
-  .stage { align-items: flex-start; padding-top: 16px; }
+  .stage { align-items: flex-start; padding: 16px 12px 12px; }
   .board { width: 100%; }
-  .dock { top: calc(100% + 12px); bottom: auto; width: 100%; padding: 12px 0; }
+  .dock { width: 100%; padding: 12px 0; }
   .stage.is-discovering .dock { transform: translateX(-50%) translateY(12px); }
   .card { position: fixed; top: auto; bottom: 16px; translate: -50% 0; padding: 18px; }
   .card-top { flex-direction: column; align-items: stretch; gap: 14px; }

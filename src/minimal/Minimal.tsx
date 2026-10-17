@@ -138,6 +138,7 @@ export default function Minimal() {
       if (!s || !b || !stage.current) return;
       stage.current.style.setProperty("--cx", `${b.left - s.left + b.width / 2}px`);
       stage.current.style.setProperty("--cy", `${b.top - s.top + b.height / 2}px`);
+      stage.current.style.setProperty("--bh", `${b.height / 2}px`);
     };
     place();
     const ro = new ResizeObserver(place);
@@ -335,52 +336,52 @@ export default function Minimal() {
             )}
           </div>
 
-      {pick && !placing && (
-        <div className="card" role="dialog" aria-label={`${pick.song.title} by ${pick.song.artist}`}>
-          <button type="button" className="close" onClick={close} aria-label="Close">×</button>
-          <div className="card-top">
-            <button type="button" className="cover" onClick={togglePlay} aria-label={playing ? "Pause preview" : "Play 30-second preview"}>
-              {pick.preview.artworkUrl ? <img src={pick.preview.artworkUrl} alt="" /> : <span className="cover-blank">♪</span>}
-              <span className="cover-play" aria-hidden="true">{playing ? "❚❚" : "▶"}</span>
-              <svg className="ring" viewBox="0 0 36 36" aria-hidden="true">
-                <circle cx="18" cy="18" r="16" pathLength="1" style={{ strokeDashoffset: 1 - progress }} />
-              </svg>
-            </button>
-            <div className="meta">
-              <div className="title">{pick.song.title}</div>
-              <div className="artist">{pick.song.artist}{pick.song.year ? ` · ${pick.song.year}` : ""}</div>
-              <div className="links">
-                <a href={spotifySearchUrl(pick.song)} target="_blank" rel="noreferrer" onClick={touched}><SpotifyLogo /> Spotify</a>
-                <a href={pick.preview.pageUrl} target="_blank" rel="noreferrer" onClick={touched}><AppleMusicLogo /> Apple Music</a>
+        </div>
+
+        {pick && !placing && (
+          <div className="card" role="dialog" aria-label={`${pick.song.title} by ${pick.song.artist}`}>
+            <button type="button" className="close" onClick={close} aria-label="Close">×</button>
+            <div className="card-top">
+              <button type="button" className="cover" onClick={togglePlay} aria-label={playing ? "Pause preview" : "Play 30-second preview"}>
+                {pick.preview.artworkUrl ? <img src={pick.preview.artworkUrl} alt="" /> : <span className="cover-blank">♪</span>}
+                <span className="cover-play" aria-hidden="true">{playing ? "❚❚" : "▶"}</span>
+                <svg className="ring" viewBox="0 0 36 36" aria-hidden="true">
+                  <circle cx="18" cy="18" r="16" pathLength="1" style={{ strokeDashoffset: 1 - progress }} />
+                </svg>
+              </button>
+              <div className="meta">
+                <div className="title">{pick.song.title}</div>
+                <div className="artist">{pick.song.artist}{pick.song.year ? ` · ${pick.song.year}` : ""}</div>
+                <div className="links">
+                  <a href={spotifySearchUrl(pick.song)} target="_blank" rel="noreferrer" onClick={touched}><SpotifyLogo /> Spotify</a>
+                  <a href={pick.preview.pageUrl} target="_blank" rel="noreferrer" onClick={touched}><AppleMusicLogo /> Apple Music</a>
+                </div>
               </div>
             </div>
+
+            {!discover && (
+              <button type="button" className="discover-link" onClick={openDiscover}>
+                Discover more {sectionOf(pick.song).toLowerCase()} songs <span aria-hidden="true">→</span>
+              </button>
+            )}
+            {pick.step === "ask" && (
+              <div className="ask">
+                <p className="ask-q">How did we do?</p>
+                <p className="ask-sub">Your answer helps train the next version of the model.</p>
+                <div className="row">
+                  <button type="button" className="thumb up" onClick={thumbsUp} aria-label="Good match"><span>👍</span></button>
+                  <button type="button" className="thumb down" onClick={thumbsDown} aria-label="Not a match"><span>👎</span></button>
+                </div>
+              </div>
+            )}
+            {(pick.step === "thanks" || pick.step === "placed") && (
+              <div className="ask">
+                <p className="ask-q">{pick.step === "thanks" ? "Glad it fit." : "Thanks, noted."}</p>
+                <div className="row"><button type="button" className="ghost" onClick={findSong}>Another one</button></div>
+              </div>
+            )}
           </div>
-
-          {!discover && (
-            <button type="button" className="discover-link" onClick={openDiscover}>
-              Discover more {sectionOf(pick.song).toLowerCase()} songs <span aria-hidden="true">→</span>
-            </button>
-          )}
-          {pick.step === "ask" && (
-            <div className="ask">
-              <p className="ask-q">How did we do?</p>
-              <p className="ask-sub">Your answer helps train the next version of the model.</p>
-              <div className="row">
-                <button type="button" className="thumb up" onClick={thumbsUp} aria-label="Good match"><span>👍</span></button>
-                <button type="button" className="thumb down" onClick={thumbsDown} aria-label="Not a match"><span>👎</span></button>
-              </div>
-            </div>
-          )}
-          {(pick.step === "thanks" || pick.step === "placed") && (
-            <div className="ask">
-              <p className="ask-q">{pick.step === "thanks" ? "Glad it fit." : "Thanks, noted."}</p>
-              <div className="row"><button type="button" className="ghost" onClick={findSong}>Another one</button></div>
-            </div>
-          )}
-        </div>
-      )}
-
-        </div>
+        )}
       </main>
 
       <audio
