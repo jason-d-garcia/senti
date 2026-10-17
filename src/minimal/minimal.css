@@ -34,8 +34,8 @@
   background: conic-gradient(from 0deg at var(--cx, 50%) var(--cy, 50%),
     #f6b93b 0deg, #f6b93b 30deg, #31c9a3 120deg, #31c9a3 150deg,
     #5b8cff 210deg, #5b8cff 240deg, #f0604d 300deg, #f0604d 330deg, #f6b93b 360deg);
-  -webkit-mask-image: radial-gradient(farthest-corner at var(--cx, 50%) var(--cy, 50%), transparent 18%, rgba(0, 0, 0, 0.35) 45%, #000 85%);
-  mask-image: radial-gradient(farthest-corner at var(--cx, 50%) var(--cy, 50%), transparent 18%, rgba(0, 0, 0, 0.35) 45%, #000 85%);
+  -webkit-mask-image: radial-gradient(farthest-corner at var(--cx, 50%) var(--cy, 50%), transparent 46%, rgba(0, 0, 0, 0.25) 66%, rgba(0, 0, 0, 0.75) 82%, #000 96%);
+  mask-image: radial-gradient(farthest-corner at var(--cx, 50%) var(--cy, 50%), transparent 46%, rgba(0, 0, 0, 0.25) 66%, rgba(0, 0, 0, 0.75) 82%, #000 96%);
   opacity: 0.24;
 }
 
@@ -126,7 +126,7 @@
 /* Emotion names on the map: faint, brighter and larger in the light's section, clearer while placing a song. */
 .emotion-label {
   position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--k, 1)));
-  font: 700 0.8rem/1 var(--font-display); letter-spacing: 0.02em; white-space: nowrap;
+  font: 600 0.72rem/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap;
   opacity: 0.22; pointer-events: none; user-select: none;
   transition: opacity 300ms ease, transform 300ms ease, text-shadow 300ms ease;
 }
