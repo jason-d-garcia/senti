@@ -40,16 +40,23 @@
   -webkit-mask-image: radial-gradient(circle var(--bh, 40vh) at var(--cx, 50%) var(--cy, 50%), transparent 6%, #000 22%, rgba(0, 0, 0, 0.5) 52%, transparent 100%);
   mask-image: radial-gradient(circle var(--bh, 40vh) at var(--cx, 50%) var(--cy, 50%), transparent 6%, #000 22%, rgba(0, 0, 0, 0.5) 52%, transparent 100%);
   opacity: 0.13;
-  transition: opacity 600ms ease;
+  /* Zooms with the map (same timing as .zoom-layer), so zoomed in, the region is lit from the
+     direction of the map's centre. --zv/--za is the zoom centre in grid units, --zk the zoom. */
+  transform-origin: calc(var(--cx, 50%) + var(--zv, 0) * var(--bh, 40vh)) calc(var(--cy, 50%) - var(--za, 0) * var(--bh, 40vh));
+  transform: translate(calc(var(--zv, 0) * var(--bh, 40vh) * -1), calc(var(--za, 0) * var(--bh, 40vh))) scale(var(--zk, 1));
+  transition: opacity 600ms ease, transform 750ms cubic-bezier(0.65, 0, 0.25, 1);
 }
-/* The page-wide glow belongs to the full map; zoomed in, a soft wash in the region's colour replaces it. */
 .stage.is-discovering .page-glow { opacity: 0; }
-.discover-tint {
-  position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(circle var(--bh, 40vh) at var(--cx, 50%) var(--cy, 50%), var(--tint) 0%, transparent 100%);
-  opacity: 0; transition: opacity 700ms ease;
+/* Zoomed in: light in the region's colour coming from the direction of the map's centre,
+   placed just off-screen on that side (--lx/--ly) and fading across the view. */
+.zoom-light {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle calc(var(--bh, 40vh) * 1.9) at var(--lx, 50%) var(--ly, 50%),
+    color-mix(in srgb, var(--tint, #fff) 70%, transparent) 0%, color-mix(in srgb, var(--tint, #fff) 25%, transparent) 40%, transparent 75%);
+  transition: opacity 700ms ease 150ms;
 }
-.stage.is-discovering .discover-tint { opacity: 0.12; }
+.stage.is-discovering .zoom-light { opacity: 0.32; }
+.stage.is-panning .page-glow { transition: opacity 600ms ease; }
 
 /* Axes run to the edges of the screen; their titles sit at the ends with a soft white glow. */
 .page-axes { position: absolute; inset: 0; pointer-events: none; transition: opacity 500ms ease; }

@@ -260,6 +260,8 @@ export default function Minimal() {
   const closeDiscover = () => setDiscover(null);
   // Dragging the zoomed map recentres it; covers follow whichever emotion is now in the middle.
   const panTo = (center: Pt) => setDiscover((d) => d && { ...d, center, section: sectionOf(center), near: null });
+  // The centre while a drag is in progress, so the page glow moves with the map.
+  const [livePan, setLivePan] = useState<Pt | null>(null);
   useEffect(() => {
     if (!discover) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeDiscover(); };
@@ -276,6 +278,20 @@ export default function Minimal() {
   };
 
   const idx = emotion ? EMOTIONS.indexOf(emotion) : WHEEL.length - 1;
+
+  // Where the zoomed view's light comes from: off-screen, in the direction of the map's centre.
+  const zoomLight = useMemo(() => {
+    if (!discover) return {};
+    const c = livePan ?? discover.center;
+    const len = Math.hypot(c.valence, c.arousal);
+    // Screen x grows with valence, screen y shrinks with arousal; the centre is the opposite way.
+    const [dx, dy] = len < 0.02 ? [0, 0] : [-c.valence / len, c.arousal / len];
+    return {
+      "--lx": `calc(var(--cx, 50%) + ${dx} * var(--bh, 40vh) * 1.15)`,
+      "--ly": `calc(var(--cy, 50%) + ${dy} * var(--bh, 40vh) * 1.15)`,
+      "--tint": labelColor(discover.section),
+    } as React.CSSProperties;
+  }, [discover, livePan]);
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
@@ -287,10 +303,15 @@ export default function Minimal() {
         </nav>
       </header>
 
-      <main className={`stage${discover ? " is-discovering" : ""}`} ref={stage}>
+      <main
+        className={`stage${discover ? " is-discovering" : ""}${livePan ? " is-panning" : ""}`}
+        ref={stage}
+        style={(discover && view ? {
+          "--zv": (livePan ?? discover.center).valence, "--za": (livePan ?? discover.center).arousal, "--zk": view.scale,
+        } : {}) as React.CSSProperties}
+      >
         <div className="page-glow" aria-hidden="true" />
-        <div className="discover-tint" aria-hidden="true"
-          style={{ "--tint": discover ? labelColor(discover.section) : "transparent" } as React.CSSProperties} />
+        <div className="zoom-light" aria-hidden="true" style={zoomLight} />
         <div className="page-axes" aria-hidden="true">
           <span className="axis axis-x" /><span className="axis axis-y" />
           <span className="axis-end end-right">Feels good →</span>
@@ -307,7 +328,7 @@ export default function Minimal() {
             pinned={placing ? placePinned : pinned}
             onPin={placing ? setPlacePinned : setPinned}
             placing={placing ? { at: placeAt, artwork: pick!.preview.artworkUrl, onMove: setPlaceAt } : undefined}
-            zoom={discover && view ? { center: discover.center, scale: view.scale, songs: fieldSongs, onSong: playNearby, onPan: panTo } : null}
+            zoom={discover && view ? { center: discover.center, scale: view.scale, songs: fieldSongs, onSong: playNearby, onPan: panTo, onPanLive: setLivePan } : null}
           />
 
           {discover && (

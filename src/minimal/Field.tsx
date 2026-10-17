@@ -32,7 +32,7 @@ interface Props {
   /** While placing a song, the pointer moves the song marker instead of the dot. */
   placing?: { at: Pt; artwork?: string; onMove: (p: Pt) => void };
   /** Zoomed in on part of the map, showing songs there. */
-  zoom?: { center: Pt; scale: number; songs: FieldSong[]; onSong: (id: string) => void; onPan: (center: Pt) => void } | null;
+  zoom?: { center: Pt; scale: number; songs: FieldSong[]; onSong: (id: string) => void; onPan: (center: Pt) => void; onPanLive?: (center: Pt | null) => void } | null;
 }
 
 const pct = (p: Pt) => ({ x: ((p.valence + 1) / 2) * 100, y: ((1 - p.arousal) / 2) * 100 });
@@ -150,10 +150,12 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     const box = ref.current?.getBoundingClientRect();
     if (!pan.current || !box || !zoom) return;
     const k = zoom.scale;
-    setPanCenter({
+    const next = {
       valence: clamp(pan.current.from.valence - ((e.clientX - pan.current.x) / (box.width / 2)) / k),
       arousal: clamp(pan.current.from.arousal + ((e.clientY - pan.current.y) / (box.height / 2)) / k),
-    });
+    };
+    setPanCenter(next);
+    zoom.onPanLive?.(next);
   };
   const follow = (e: PointerEvent<HTMLDivElement>) => {
     if (zoomed) { panMove(e); return; }
@@ -190,6 +192,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     if (pan.current && panCenter && zoom) zoom.onPan(panCenter);
     pan.current = null;
     setPanCenter(null);
+    zoom?.onPanLive?.(null);
   };
   const onPointerUp = () => { pressed.current = false; endPan(); };
   const onPointerLeave = (e: PointerEvent<HTMLDivElement>) => {
