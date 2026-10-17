@@ -25,22 +25,23 @@ const median = (xs) => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
 
+// Per-song summaries live in one hash, updated on each vote, so a read is a single command.
 export async function GET() {
   if (!URL || !TOKEN) return json({ error: "no database" }, 503);
-  const [songs] = await redis([["SMEMBERS", "fb:songs"]]);
-  if (!songs.length) return json({});
-  const lists = await redis(songs.map((k) => ["LRANGE", `fb:p:${k}`, 0, -1]));
+  const [flat] = await redis([["HGETALL", "fb:agg"]]);
   const out = {};
-  songs.forEach((k, i) => {
-    const pts = lists[i].map((s) => s.split(",").map(Number));
-    if (!pts.length) return;
-    const v = median(pts.map((p) => p[0]));
-    const a = median(pts.map((p) => p[1]));
-    out[k] = { n: pts.length, v, a, spread: median(pts.map((p) => Math.hypot(p[0] - v, p[1] - a))) };
-  });
+  for (let i = 0; i + 1 < flat.length; i += 2) out[flat[i]] = JSON.parse(flat[i + 1]);
   return new Response(JSON.stringify(out), {
-    headers: { "content-type": "application/json", "cache-control": "s-maxage=30, stale-while-revalidate=300" },
+    headers: { "content-type": "application/json", "cache-control": "s-maxage=60, stale-while-revalidate=600" },
   });
+}
+
+function summarize(entries) {
+  const pts = entries.map((s) => s.split(",").map(Number));
+  const v = median(pts.map((p) => p[0]));
+  const a = median(pts.map((p) => p[1]));
+  const spread = median(pts.map((p) => Math.hypot(p[0] - v, p[1] - a)));
+  return { n: pts.length, v: +v.toFixed(3), a: +a.toFixed(3), spread: +spread.toFixed(3) };
 }
 
 export async function POST(request) {
@@ -64,10 +65,11 @@ export async function POST(request) {
   const [fresh] = await redis([["SET", `fb:seen:${voter}:${song}`, "1", "NX", "EX", 60 * 60 * 24 * 365]]);
   if (fresh !== "OK") return json({ error: "already placed" }, 409);
   const entry = [v.toFixed(3), a.toFixed(3), blind ? 1 : 0, agree ? 1 : 0, Date.now()].join(",");
-  await redis([
-    ["SADD", "fb:songs", song],
+  const [, , entries] = await redis([
     ["RPUSH", `fb:p:${song}`, entry],
     ["LTRIM", `fb:p:${song}`, -MAX_PER_SONG, -1],
+    ["LRANGE", `fb:p:${song}`, 0, -1],
   ]);
+  await redis([["HSET", "fb:agg", song, JSON.stringify(summarize(entries))]]);
   return json({ ok: true });
 }
