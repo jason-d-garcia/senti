@@ -40,7 +40,7 @@ function Feeling({ dot }: { dot: Pt }) {
   useEffect(() => { prev.current = idx; }, [idx]);
   return (
     <h1 className="feeling" aria-live="polite">
-      <span className="feeling-lead">I'm feeling</span>
+      <span className="feeling-lead">I'm feeling</span>{" "}
       <span className="wheel">
         <span key={idx} className={`wheel-item roll-${dir || "none"}`} style={{ color: COLOR[e?.mood ?? "mixed"] }}>
           <span className="wheel-emoji" aria-hidden="true">{e?.emoji ?? MIXED_EMOJI}</span>
@@ -136,7 +136,8 @@ export default function Minimal() {
         ) : (
           <>
             <Feeling dot={dot} />
-            <button type="button" className="ghost find" onClick={findSong} disabled={finding || !songs.length}>
+            <button type="button" className="find" onClick={findSong} disabled={finding || !songs.length}>
+              <span className="find-icon" aria-hidden="true">▶</span>
               {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
             </button>
             {notFound && <p className="hint">Couldn't find a playable song here. Try another spot.</p>}

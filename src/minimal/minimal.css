@@ -16,21 +16,26 @@
 .field {
   position: relative; flex: 1; min-height: 0;
   margin: 12px 12px 0;
-  touch-action: none; cursor: crosshair; outline: none;
+  touch-action: none; cursor: none; outline: none;
 }
 .field:focus-visible .light, .field:focus-visible .song-pin { outline: 2px solid rgba(232, 236, 248, 0.7); outline-offset: 4px; }
-.axis { position: absolute; background: var(--faint); pointer-events: none; }
+.axis { position: absolute; background: rgba(160, 175, 220, 0.2); pointer-events: none; }
 .axis-x { left: 0; right: 0; top: 50%; height: 1px; }
 .axis-y { top: 0; bottom: 0; left: 50%; width: 1px; }
 .axis-end {
-  position: absolute; pointer-events: none; user-select: none;
-  font: 500 0.66rem/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); opacity: 0.6;
+  position: absolute; pointer-events: none; user-select: none; white-space: nowrap;
+  font: 600 0.8rem/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(214, 222, 245, 0.78);
 }
-.end-right { right: 6px; top: calc(50% + 8px); }
-.end-left { left: 6px; top: calc(50% + 8px); }
-.end-top { top: 4px; left: calc(50% + 8px); }
-.end-bottom { bottom: 4px; left: calc(50% + 8px); }
-.trail { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.end-right { right: 8px; top: calc(50% + 10px); }
+.end-left { left: 8px; top: calc(50% + 10px); }
+.end-top { top: 8px; left: calc(50% + 10px); }
+.end-bottom { bottom: 8px; left: calc(50% + 10px); }
+.sections { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.sections line, .sections ellipse {
+  fill: none; stroke: rgba(160, 175, 220, 0.13); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 3 5;
+}
+.sparkles { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .light {
   position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
   background: #fff;
@@ -48,19 +53,20 @@
 
 /* Dock */
 .dock {
-  flex: none; min-height: 150px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-  padding: 10px 16px calc(18px + env(safe-area-inset-bottom));
+  flex: none; min-height: 210px;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 18px;
+  padding: 22px 16px calc(40px + env(safe-area-inset-bottom));
   text-align: center;
 }
+/* "I'm feeling" sits just left of centre and the emotion just right of it, so neither moves. */
 .feeling {
-  margin: 0; display: flex; align-items: center; justify-content: center; gap: 0.35em; flex-wrap: wrap;
+  margin: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; align-items: center; column-gap: 0.3em;
   font: 600 clamp(1.5rem, 4.2vw, 2.4rem)/1.35 var(--font-display); letter-spacing: -0.01em;
 }
-.feeling-lead { color: var(--dim); font-weight: 600; }
-.wheel { display: inline-flex; height: 1.35em; overflow: hidden; min-width: 6ch; }
+.feeling-lead { color: var(--dim); font-weight: 600; text-align: right; }
+.wheel { display: inline-flex; justify-self: start; height: 1.35em; overflow: hidden; }
 .wheel-item { display: inline-flex; align-items: center; font-weight: 800; white-space: nowrap; transition: color 300ms ease; }
-.wheel-emoji { font-size: 0.85em; margin-right: 0.3em; }
+.wheel-emoji { font-size: 0.85em; margin-right: 0.45em; }
 .roll-up { animation: roll-up 280ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
 .roll-down { animation: roll-down 280ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
 @keyframes roll-up { from { transform: translateY(80%); opacity: 0; filter: blur(3px); } to { transform: none; opacity: 1; filter: none; } }
@@ -73,6 +79,21 @@
 .ghost { background: transparent; color: var(--dim); border: 1px solid rgba(160, 175, 220, 0.22); }
 .ghost:hover:not(:disabled) { color: var(--ink); border-color: var(--glow); box-shadow: 0 0 18px -6px var(--glow); }
 .ghost:disabled { opacity: 0.5; cursor: progress; }
+.find {
+  display: inline-flex; align-items: center; gap: 10px;
+  font: 700 1rem/1 var(--font-body); padding: 15px 26px 15px 20px; border-radius: 999px; cursor: pointer;
+  color: #05060b; background: var(--glow); border: 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset, 0 10px 34px -10px var(--glow), 0 0 44px -14px var(--glow);
+  transition: background 300ms ease, box-shadow 300ms ease, transform 160ms ease;
+}
+.find:hover:not(:disabled) { transform: translateY(-1px) scale(1.03); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset, 0 14px 40px -8px var(--glow), 0 0 60px -10px var(--glow); }
+.find:active:not(:disabled) { transform: scale(0.98); }
+.find:disabled { opacity: 0.7; cursor: progress; }
+.find:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.find-icon {
+  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(5, 6, 11, 0.85); color: var(--glow); font-size: 0.7rem; padding-left: 2px;
+}
 .solid { background: var(--ink); color: #05060b; border: 1px solid transparent; }
 .solid:hover { box-shadow: 0 0 18px -4px var(--glow); }
 .ghost:focus-visible, .solid:focus-visible, .thumb:focus-visible, .cover:focus-visible, .close:focus-visible, .links a:focus-visible {
@@ -86,7 +107,7 @@
 
 /* Song card */
 .card {
-  position: absolute; left: 50%; bottom: 168px; z-index: 5;
+  position: absolute; left: 50%; bottom: 228px; z-index: 5;
   width: min(380px, calc(100% - 32px));
   transform: translateX(-50%);
   padding: 16px; border-radius: 20px;
@@ -144,11 +165,13 @@
 @keyframes shake-down { 25% { transform: translateY(4px) rotate(-6deg); } 50% { transform: translateY(1px) rotate(5deg); } 75% { transform: translateY(5px) rotate(-3deg); } }
 
 @media (max-width: 560px) {
-  .dock { min-height: 132px; }
-  .card { bottom: 148px; }
+  .dock { min-height: 190px; padding-top: 16px; gap: 14px; }
+  .card { bottom: 200px; }
+  .feeling { font-size: 1.35rem; }
   .cover { width: 76px; height: 76px; }
   .axis-end { font-size: 0.58rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .roll-up, .roll-down, .card, .ask, .thumb span { animation: none !important; }
+  .find { transition: none; }
 }
