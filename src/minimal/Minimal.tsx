@@ -289,6 +289,8 @@ export default function Minimal() {
 
       <main className={`stage${discover ? " is-discovering" : ""}`} ref={stage}>
         <div className="page-glow" aria-hidden="true" />
+        <div className="discover-tint" aria-hidden="true"
+          style={{ "--tint": discover ? labelColor(discover.section) : "transparent" } as React.CSSProperties} />
         <div className="page-axes" aria-hidden="true">
           <span className="axis axis-x" /><span className="axis axis-y" />
           <span className="axis-end end-right">Feels good →</span>
