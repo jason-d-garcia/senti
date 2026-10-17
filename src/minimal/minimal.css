@@ -87,7 +87,9 @@
 .field-axis.axis-x { left: -50%; right: -50%; top: 50%; height: calc(1px / var(--k)); }
 .field-axis.axis-y { top: -50%; bottom: -50%; left: 50%; width: calc(1px / var(--k)); }
 .field.is-zoomed .field-axis { opacity: 1; }
-.field.is-zoomed .sections { opacity: 0.8; }
+/* Dash lengths scale with the zoom, so section lines go solid (and fainter) when zoomed in. */
+.field.is-zoomed .sections { opacity: 0.5; }
+.field.is-zoomed .sections line, .field.is-zoomed .sections ellipse { stroke-dasharray: none; }
 
 /* Songs around the zoomed spot: covers for the region's songs, small dots for the rest. */
 .song-dot {
