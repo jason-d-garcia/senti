@@ -1,5 +1,5 @@
 // Export every listener placement to CSV for retraining.
-// Usage: KV_REST_API_URL=... KV_REST_API_TOKEN=... node scripts/export_votes.mjs > votes.csv
+// Usage: KV_REST_API_URL=... KV_REST_API_TOKEN=... node scripts/export_votes.mjs [--log] > votes.csv
 // (`vercel env pull` writes these to .env.local for the linked project.)
 
 const URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
@@ -17,6 +17,20 @@ async function redis(commands) {
   });
   if (!r.ok) throw new Error(`redis ${r.status}`);
   return (await r.json()).map((x) => x.result);
+}
+
+// --log: every vote from fb:log as CSV, including 👎 votes where the song wasn't placed.
+if (process.argv.includes("--log")) {
+  const [rows] = await redis([["LRANGE", "fb:log", 0, -1]]);
+  const q = (s) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+  console.log("title,artist,valence,arousal,blind,agree,placed,model_valence,model_arousal,source,time");
+  for (const r of rows) {
+    const x = JSON.parse(r);
+    const [title, artist] = x.song.split("|");
+    console.log([q(title), q(artist), x.v, x.a, +x.blind, +x.agree, +x.placed, x.model?.v ?? "", x.model?.a ?? "",
+      x.source ?? "", new Date(x.t).toISOString()].join(","));
+  }
+  process.exit(0);
 }
 
 const csv = (s) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);

@@ -4,9 +4,11 @@ export interface Preview {
   audioUrl: string;
   /** Apple Music page for the track, linked next to the preview as Apple's terms ask. */
   pageUrl: string;
+  /** Album or single cover, 600 px. */
+  artworkUrl?: string;
 }
 
-interface ItunesTrack { trackName?: string; artistName?: string; previewUrl?: string; trackViewUrl?: string }
+interface ItunesTrack { trackName?: string; artistName?: string; previewUrl?: string; trackViewUrl?: string; artworkUrl100?: string }
 
 /** Lowercase, drop bracketed parts and "feat." credits, strip accents and punctuation. */
 export function normalize(s: string): string {
@@ -41,7 +43,8 @@ export function findPreview(song: { title: string; artist: string }): Promise<Pr
       .then((r) => (r.ok ? r.json() : { results: [] }))
       .then(({ results }: { results: ItunesTrack[] }) => {
         const t = results.find((r) => isMatch(song, r));
-        return t ? { audioUrl: t.previewUrl!, pageUrl: t.trackViewUrl ?? "https://music.apple.com" } : null;
+        return t ? { audioUrl: t.previewUrl!, pageUrl: t.trackViewUrl ?? "https://music.apple.com",
+          artworkUrl: t.artworkUrl100?.replace(/100x100bb/, "600x600bb") } : null;
       })
       .catch(() => {
         cache.delete(key); // network error: allow a retry

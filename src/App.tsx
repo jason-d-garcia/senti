@@ -4,8 +4,9 @@ import { MoodGrid } from "./MoodGrid";
 import { MIXED_EMOJI, MOODS, emotionAt, quadrantOf, nearest, placeSong, spotifySearchUrl } from "./mood";
 import type { Mood, PlacedSong, Song } from "./mood";
 import { findPreview } from "./preview";
+import { loadHits } from "./catalog";
 import type { Preview } from "./preview";
-import { blend, confidenceLabel, loadFeedback, sendVote, songKey, votedSongs } from "./feedback";
+import { confidenceLabel, loadFeedback, sendVote, songKey, votedSongs } from "./feedback";
 import type { Agg } from "./feedback";
 
 const MATCH_COUNT = 8;
@@ -36,14 +37,6 @@ interface Catalog {
 }
 const catalog = catalogJson as unknown as Catalog;
 
-type HitRow = [year: number, peakRank: number, title: string, artist: string, valence: number, arousal: number];
-/** The Billboard list is about 300 KB, so it loads after the page is up. */
-const loadHits = () =>
-  import("./data/billboard.json").then((m) =>
-    (m.default as unknown as { songs: HitRow[] }).songs.map(
-      ([year, peak_rank, title, artist, valence, arousal]): Song => ({ title, artist, valence, arousal, year, peak_rank }),
-    ).map(placeSong),
-  );
 const HIT_COUNT = 5411;
 const DECADES = [1960, 1970, 1980, 1990, 2000, 2010, 2020];
 type Collection = "test" | "hits";
@@ -82,11 +75,8 @@ export default function App() {
     const base = collection === "hits"
       ? (decade === null ? hitSongs : hitSongs.filter((s) => Math.floor(s.year! / 10) * 10 === decade))
       : testSongs;
-    // Songs listeners have placed move part of the way toward the listeners' median spot.
-    return base.map((s) => {
-      const agg = feedback.aggs[songKey(s)];
-      return agg ? { ...s, ...blend(s, agg) } : s;
-    });
+    // Listener placements are stored for retraining but don't move songs yet.
+    return base;
   }, [collection, decade, hitSongs, testSongs, feedback]);
   const [pos, setPos] = useState({ valence: 0.55, arousal: 0.45 });
   const [hideUncertain, setHideUncertain] = useState(false);
@@ -131,7 +121,7 @@ export default function App() {
     if (!rated) return;
     setSaving(true);
     const at = agree ? { v: rated.valence, a: rated.arousal } : { v: pos.valence, a: pos.arousal };
-    await sendVote({ song: songKey(rated), ...at, blind: rateBlind, agree });
+    await sendVote({ song: songKey(rated), ...at, blind: rateBlind, agree, model: { v: rated.valence, a: rated.arousal }, source: "classic" });
     setFeedback(await loadFeedback());
     setSaving(false);
     setRateStep("done");

@@ -21,6 +21,12 @@ export interface Vote {
   blind: boolean;
   /** 👍 on the shown spot rather than a correction. */
   agree: boolean;
+  /** False for a 👎 where the listener skipped placing the song; v and a are then the model's spot. */
+  placed?: boolean;
+  /** The model's position for the song, kept with the vote for retraining. */
+  model?: { v: number; a: number };
+  /** Which page the vote came from. */
+  source?: "minimal" | "classic";
 }
 
 /** The model's prediction counts like this many listener placements. */

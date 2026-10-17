@@ -52,7 +52,9 @@ export async function POST(request) {
   } catch {
     return json({ error: "bad json" }, 400);
   }
-  const { song, v, a, voter, blind, agree } = body ?? {};
+  const { song, v, a, voter, blind, agree, model, source } = body ?? {};
+  // A 👎 where the listener skipped placing the song: counted, but not a placement.
+  const placed = body?.placed !== false;
   const inRange = (x) => typeof x === "number" && Number.isFinite(x) && x >= -1 && x <= 1;
   if (typeof song !== "string" || song.length > 300 || !song.includes("|") || !inRange(v) || !inRange(a)
       || typeof voter !== "string" || voter.length > 64) {
@@ -64,7 +66,16 @@ export async function POST(request) {
   if (count > MAX_PER_MINUTE) return json({ error: "slow down" }, 429);
   const [fresh] = await redis([["SET", `fb:seen:${voter}:${song}`, "1", "NX", "EX", 60 * 60 * 24 * 365]]);
   if (fresh !== "OK") return json({ error: "already placed" }, 409);
-  const entry = [v.toFixed(3), a.toFixed(3), blind ? 1 : 0, agree ? 1 : 0, Date.now()].join(",");
+  const now = Date.now();
+  const okModel = model && inRange(model.v) && inRange(model.a);
+  // Every vote, including skipped placements, in one append-only log for retraining.
+  await redis([
+    ["RPUSH", "fb:log", JSON.stringify({ song, v, a, blind: !!blind, agree: !!agree, placed,
+      model: okModel ? { v: model.v, a: model.a } : null, source: typeof source === "string" ? source.slice(0, 16) : null, t: now })],
+    ["HINCRBY", "fb:verdicts", `${song}|${agree ? "up" : "down"}`, 1],
+  ]);
+  if (!placed) return json({ ok: true });
+  const entry = [v.toFixed(3), a.toFixed(3), blind ? 1 : 0, agree ? 1 : 0, now].join(",");
   const [, , entries] = await redis([
     ["RPUSH", `fb:p:${song}`, entry],
     ["LTRIM", `fb:p:${song}`, -MAX_PER_SONG, -1],
