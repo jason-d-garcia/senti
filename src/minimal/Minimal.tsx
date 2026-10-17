@@ -31,25 +31,67 @@ function shuffle<T>(xs: T[]): T[] {
   return a;
 }
 
-/** "I'm feeling …" with the emoji and word rolling in like a picker wheel. */
+/** Wheel order: the 16 emotions around the circle, then Mixed, repeated so it can spin either way. */
+const WHEEL = [...EMOTIONS.map((e) => ({ name: e.name, emoji: e.emoji, color: COLOR[e.mood] })),
+  { name: "Mixed", emoji: MIXED_EMOJI, color: COLOR.mixed }];
+const COPIES = 5;
+
+/** "I'm feeling …", with the emotion on a vertical picker wheel that turns to follow the light. */
 function Feeling({ dot }: { dot: Pt }) {
   const e = emotionAt(dot.valence, dot.arousal);
-  const idx = e ? EMOTIONS.indexOf(e) : -1;
-  const prev = useRef(idx);
-  const dir = idx === prev.current ? "" : (idx > prev.current ? "up" : "down");
-  useEffect(() => { prev.current = idx; }, [idx]);
+  const idx = e ? EMOTIONS.indexOf(e) : WHEEL.length - 1;
+  // Continuous wheel position: move to the nearest copy of the new emotion so the wheel takes the short way round.
+  const [pos, setPos] = useState(idx + WHEEL.length * Math.floor(COPIES / 2));
+  const [animate, setAnimate] = useState(true);
+  useEffect(() => {
+    setPos((cur) => {
+      const n = WHEEL.length;
+      const base = Math.round((cur - idx) / n) * n + idx;
+      const next = [base - n, base, base + n].reduce((a, b) => (Math.abs(b - cur) < Math.abs(a - cur) ? b : a));
+      return next;
+    });
+  }, [idx]);
+  // Drifted towards either end: jump back to the middle copy without animating.
+  useEffect(() => {
+    const n = WHEEL.length, mid = n * Math.floor(COPIES / 2);
+    if (pos < n || pos >= n * (COPIES - 1)) {
+      const t = setTimeout(() => { setAnimate(false); setPos(mid + idx); }, 320);
+      return () => clearTimeout(t);
+    }
+    if (!animate) { const r = requestAnimationFrame(() => setAnimate(true)); return () => cancelAnimationFrame(r); }
+  }, [pos, idx, animate]);
+  const items = Array.from({ length: WHEEL.length * COPIES }, (_, i) => WHEEL[i % WHEEL.length]);
+  const current = WHEEL[idx];
   return (
-    <h1 className="feeling" aria-live="polite">
-      <span className="feeling-lead">I'm feeling</span>{" "}
-      <span className="wheel">
-        <span key={idx} className={`wheel-item roll-${dir || "none"}`} style={{ color: COLOR[e?.mood ?? "mixed"] }}>
-          <span className="wheel-emoji" aria-hidden="true">{e?.emoji ?? MIXED_EMOJI}</span>
-          {(e?.name ?? "Mixed").toLowerCase()}
+    <h1 className="feeling">
+      <span className="feeling-lead">I'm feeling</span>
+      <span className="wheel" aria-live="polite">
+        <span className="sr-only">{current.name}</span>
+        <span className={`wheel-track${animate ? "" : " no-anim"}`} style={{ transform: `translateY(${-pos * 1.35}em)` }} aria-hidden="true">
+          {items.map((w, i) => {
+            const d = i - pos;
+            if (Math.abs(d) > 3) return <span key={i} className="wheel-item" />;
+            return (
+              <span key={i} className="wheel-item" style={{
+                color: w.color,
+                opacity: d === 0 ? 1 : Math.max(0, 0.32 - (Math.abs(d) - 1) * 0.2),
+                transform: `perspective(300px) rotateX(${-d * 28}deg) scale(${1 - Math.abs(d) * 0.08})`,
+              }}>
+                <span className="wheel-emoji">{w.emoji}</span>{w.name.toLowerCase()}
+              </span>
+            );
+          })}
         </span>
       </span>
     </h1>
   );
 }
+
+const LINKS = [
+  { label: "How it works", href: "?classic" },
+  { label: "Data & model", href: "https://github.com/jason-d-garcia/moodify/blob/main/data/README.md" },
+  { label: "Code", href: "https://github.com/jason-d-garcia/moodify" },
+];
 
 export default function Minimal() {
   const [hits, setHits] = useState<PlacedSong[]>([]);
@@ -68,6 +110,8 @@ export default function Minimal() {
   const [finding, setFinding] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [placeAt, setPlaceAt] = useState<Pt>(dot);
+  const [pinned, setPinned] = useState(false);
+  const [placePinned, setPlacePinned] = useState(false);
   const audio = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -109,7 +153,7 @@ export default function Minimal() {
     });
   };
   const thumbsUp = () => { vote(true); setPick((p) => p && { ...p, step: "thanks" }); };
-  const thumbsDown = () => { setPlaceAt(dot); setPick((p) => p && { ...p, step: "place" }); };
+  const thumbsDown = () => { setPlaceAt(dot); setPlacePinned(false); setPick((p) => p && { ...p, step: "place" }); };
   const savePlace = () => { vote(false, placeAt); setPick((p) => p && { ...p, step: "placed" }); };
   const skipPlace = () => { vote(false); setPick((p) => p && { ...p, step: "placed" }); };
   const close = () => { audio.current?.pause(); setPick(null); };
@@ -117,33 +161,47 @@ export default function Minimal() {
   const placing = pick?.step === "place";
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
-      <Field
-        dot={dot}
-        onMove={setDot}
-        color={color}
-        placing={placing ? { at: placeAt, artwork: pick!.preview.artworkUrl, onMove: setPlaceAt } : undefined}
-      />
+      <header className="banner">
+        <span className="brand"><span className="brand-dot" aria-hidden="true" />Moodify</span>
+        <nav aria-label="About Moodify">
+          {LINKS.map((l) => (
+            <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
+          ))}
+        </nav>
+      </header>
 
-      <footer className="dock">
-        {placing ? (
-          <div className="place-bar">
-            <p>Drag <b>{pick!.song.title}</b> to where it belongs. <span style={{ color: COLOR[emotionAt(placeAt.valence, placeAt.arousal)?.mood ?? "mixed"] }}>{sectionOf(placeAt)}</span></p>
-            <div className="row">
-              <button type="button" className="ghost" onClick={skipPlace}>Skip</button>
-              <button type="button" className="solid" onClick={savePlace}>Save</button>
-            </div>
+      <main className="stage">
+        <div className="board">
+          <Field
+            dot={dot}
+            onMove={setDot}
+            color={color}
+            pinned={placing ? placePinned : pinned}
+            onPin={placing ? setPlacePinned : setPinned}
+            placing={placing ? { at: placeAt, artwork: pick!.preview.artworkUrl, onMove: setPlaceAt } : undefined}
+          />
+
+          <div className="dock">
+            {placing ? (
+              <div className="place-bar">
+                <p>Click where <b>{pick!.song.title}</b> belongs: <span style={{ color: COLOR[emotionAt(placeAt.valence, placeAt.arousal)?.mood ?? "mixed"] }}>{sectionOf(placeAt)}</span></p>
+                <div className="row">
+                  <button type="button" className="ghost" onClick={skipPlace}>Skip</button>
+                  <button type="button" className="solid" onClick={savePlace}>Save</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Feeling dot={dot} />
+                <button type="button" className="find" onClick={findSong} disabled={finding || !songs.length}>
+                  <span className="find-icon" aria-hidden="true">▶</span>
+                  {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
+                </button>
+                <p className="hint">{notFound ? "Couldn't find a playable song here. Try another spot."
+                  : pinned ? "Light dropped. Click anywhere to move it." : "Move to explore, click to drop the light."}</p>
+              </>
+            )}
           </div>
-        ) : (
-          <>
-            <Feeling dot={dot} />
-            <button type="button" className="find" onClick={findSong} disabled={finding || !songs.length}>
-              <span className="find-icon" aria-hidden="true">▶</span>
-              {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
-            </button>
-            {notFound && <p className="hint">Couldn't find a playable song here. Try another spot.</p>}
-          </>
-        )}
-      </footer>
 
       {pick && !placing && (
         <div className="card" role="dialog" aria-label={`${pick.song.title} by ${pick.song.artist}`}>
@@ -184,6 +242,9 @@ export default function Minimal() {
           )}
         </div>
       )}
+
+        </div>
+      </main>
 
       <audio
         ref={audio}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import { EMOTIONS, MIXED_RADIUS, emotionAt } from "../mood";
 
@@ -18,12 +18,16 @@ interface Props {
   onMove: (p: Pt) => void;
   /** CSS colour of the dot's current emotion, used for its glow and sparkles. */
   color: string;
+  /** Dropped by a click: stays put while the pointer moves; another click moves it. */
+  pinned: boolean;
+  onPin: (pinned: boolean) => void;
   /** While placing a song, the pointer moves the song marker instead of the dot. */
   placing?: { at: Pt; artwork?: string; onMove: (p: Pt) => void };
 }
 
 /** Full-bleed mood field: faint lines between the 16 emotion sections and a light that follows the pointer, shedding sparkles. */
-export function Field({ dot, onMove, color, placing }: Props) {
+export function Field({ dot, onMove, color, pinned, onPin, placing }: Props) {
+  const [ghost, setGhost] = useState<Pt | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const particles = useRef<Particle[]>([]);
@@ -88,23 +92,29 @@ export function Field({ dot, onMove, color, placing }: Props) {
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   const follow = (e: PointerEvent<HTMLDivElement>) => {
-    // Mouse and pen follow on hover; touch follows while the finger is down.
-    if (e.pointerType === "touch" && !pressed.current) return;
+    // Mouse and pen follow on hover until a click drops the light; touch moves while the finger is down.
     const p = toPt(e.clientX, e.clientY);
     if (!p) return;
+    if (!pressed.current) {
+      if (e.pointerType === "touch") return;
+      if (pinned) { setGhost(p); return; }
+    }
     history.current.push({ p, t: performance.now() });
     if (history.current.length > 60) history.current.shift();
     move(p);
   };
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     pressed.current = true;
-    if (e.pointerType === "touch") e.currentTarget.setPointerCapture(e.pointerId);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setGhost(null);
+    onPin(true);
     follow(e);
   };
   const onPointerUp = () => { pressed.current = false; };
   const onPointerLeave = (e: PointerEvent<HTMLDivElement>) => {
     pressed.current = false;
-    if (e.pointerType === "touch") return;
+    setGhost(null);
+    if (e.pointerType === "touch" || pinned) return;
     const exit = toPt(e.clientX, e.clientY), now = performance.now();
     if (!exit) return;
     const before = [...history.current].reverse().find((h) => now - h.t < REWIND_MS
@@ -118,6 +128,7 @@ export function Field({ dot, onMove, color, placing }: Props) {
     const d = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] } as Record<string, number[]>)[e.key];
     if (!d) return;
     e.preventDefault();
+    onPin(true);
     move({ valence: clamp(at.valence + d[0]), arousal: clamp(at.arousal + d[1]) });
   };
   const pos = (p: Pt) => ({ left: `${((p.valence + 1) / 2) * 100}%`, top: `${((1 - p.arousal) / 2) * 100}%` });
@@ -126,10 +137,10 @@ export function Field({ dot, onMove, color, placing }: Props) {
   return (
     <div
       ref={ref}
-      className={`field${placing ? " is-placing" : ""}`}
+      className={`field${placing ? " is-placing" : ""}${pinned ? " is-pinned" : ""}`}
       role="slider"
       tabIndex={0}
-      aria-label={placing ? "Song position. Move the pointer or use arrow keys." : "Mood. Move the pointer or use arrow keys: left and right for how good it feels, up and down for energy."}
+      aria-label={placing ? "Song position. Click or use arrow keys." : "Mood. Move the pointer and click to drop the light, or use arrow keys: left and right for how good it feels, up and down for energy."}
       aria-valuetext={active?.name ?? "Mixed"}
       onPointerDown={onPointerDown}
       onPointerMove={follow}
@@ -138,6 +149,7 @@ export function Field({ dot, onMove, color, placing }: Props) {
       onPointerLeave={onPointerLeave}
       onKeyDown={onKeyDown}
     >
+      <div className="edge-glow" aria-hidden="true" />
       <svg className="sections" viewBox="-1 -1 2 2" preserveAspectRatio="none" aria-hidden="true">
         {EMOTIONS.map((e) => e.from % 90 !== 0 && (
           <line key={e.name} x1="0" y1="0" x2={1.5 * Math.cos(rad(e.from))} y2={-1.5 * Math.sin(rad(e.from))} />
@@ -151,7 +163,8 @@ export function Field({ dot, onMove, color, placing }: Props) {
       <span className="axis-end end-top" aria-hidden="true">↑ Energetic</span>
       <span className="axis-end end-bottom" aria-hidden="true">↓ Calm</span>
       <canvas ref={canvas} className="sparkles" aria-hidden="true" />
-      <span className={`light${placing ? " is-dim" : ""}`} style={{ ...pos(dot), "--glow": color } as React.CSSProperties} aria-hidden="true" />
+      <span className={`light${placing ? " is-dim" : ""}${pinned && !placing ? " is-pinned" : ""}`} style={{ ...pos(dot), "--glow": color } as React.CSSProperties} aria-hidden="true" />
+      {ghost && <span className="ghost-ring" style={pos(ghost)} aria-hidden="true" />}
       {placing && (
         <span className="song-pin" style={pos(placing.at)} aria-hidden="true">
           {placing.artwork ? <img src={placing.artwork} alt="" /> : <span>♪</span>}

@@ -12,11 +12,42 @@
   overflow: hidden;
 }
 
+/* Banner */
+.banner {
+  flex: none; height: 44px; padding: 0 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  border-bottom: 1px solid rgba(160, 175, 220, 0.08);
+  font-size: 0.82rem;
+}
+.brand { display: inline-flex; align-items: center; gap: 8px; font: 700 0.95rem/1 var(--font-display); letter-spacing: 0.01em; }
+.brand-dot { width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px 2px var(--glow); transition: box-shadow 300ms ease; }
+.banner nav { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; }
+.banner a { color: var(--dim); text-decoration: none; white-space: nowrap; transition: color 200ms ease; }
+.banner a:hover, .banner a:focus-visible { color: var(--ink); }
+
+/* Stage: a square board centred in the space below the banner */
+.stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 12px; }
+.board {
+  position: relative;
+  flex: none;
+  width: min(100%, calc(100dvh - 44px - 24px));
+  aspect-ratio: 1;
+}
+
 /* Field */
 .field {
-  position: relative; flex: 1; min-height: 0;
-  margin: 12px 12px 0;
+  position: absolute; inset: 0;
   touch-action: none; cursor: none; outline: none;
+}
+.edge-glow {
+  position: absolute; inset: -9%; pointer-events: none;
+  /* Quadrant colours around the edge (CSS conic angles run clockwise from the top). */
+  background: conic-gradient(from 0deg, #f6b93b 0deg, #f6b93b 30deg, #31c9a3 120deg, #31c9a3 150deg,
+    #5b8cff 210deg, #5b8cff 240deg, #f0604d 300deg, #f0604d 330deg, #f6b93b 360deg);
+  /* Brightest around the board's edge, fading in towards the centre and out past the edge. */
+  -webkit-mask-image: radial-gradient(closest-side, transparent 25%, rgba(0, 0, 0, 0.4) 60%, #000 84%, transparent 100%);
+  mask-image: radial-gradient(closest-side, transparent 25%, rgba(0, 0, 0, 0.4) 60%, #000 84%, transparent 100%);
+  opacity: 0.2; filter: blur(22px);
 }
 .field:focus-visible .light, .field:focus-visible .song-pin { outline: 2px solid rgba(232, 236, 248, 0.7); outline-offset: 4px; }
 .axis { position: absolute; background: rgba(160, 175, 220, 0.2); pointer-events: none; }
@@ -44,6 +75,15 @@
   pointer-events: none;
 }
 .light.is-dim { opacity: 0.35; }
+.light.is-pinned::after {
+  content: ""; position: absolute; inset: -7px; border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--glow) 70%, #fff); animation: ping 2.4s ease-out infinite;
+}
+@keyframes ping { 0% { transform: scale(0.8); opacity: 0.9; } 70%, 100% { transform: scale(2.2); opacity: 0; } }
+.ghost-ring {
+  position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+  border: 1px solid rgba(232, 236, 248, 0.45); pointer-events: none;
+}
 .song-pin {
   position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%;
   overflow: hidden; box-shadow: 0 0 0 2px #fff, 0 6px 24px rgba(0, 0, 0, 0.6);
@@ -51,26 +91,38 @@
 }
 .song-pin img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Dock */
+/* Dock: a cutout in the lower middle of the board; the field's lines and glow stop at its edge. */
 .dock {
-  flex: none; min-height: 210px;
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 18px;
-  padding: 22px 16px calc(40px + env(safe-area-inset-bottom));
+  position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); z-index: 4;
+  width: min(440px, 88%);
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 18px 20px 16px; border-radius: 28px;
+  background: #06070d;
+  box-shadow: 0 0 24px 18px #06070d;
   text-align: center;
 }
 /* "I'm feeling" sits just left of centre and the emotion just right of it, so neither moves. */
+/* "I'm feeling" is fixed just left of centre; the wheel turns just right of it. */
 .feeling {
   margin: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; align-items: center; column-gap: 0.3em;
-  font: 600 clamp(1.5rem, 4.2vw, 2.4rem)/1.35 var(--font-display); letter-spacing: -0.01em;
+  font: 600 clamp(1.3rem, 3.2vw, 2rem)/1 var(--font-display); letter-spacing: -0.01em;
+  padding: 0.35em 0 0.55em;
 }
 .feeling-lead { color: var(--dim); font-weight: 600; text-align: right; }
-.wheel { display: inline-flex; justify-self: start; height: 1.35em; overflow: hidden; }
-.wheel-item { display: inline-flex; align-items: center; font-weight: 800; white-space: nowrap; transition: color 300ms ease; }
-.wheel-emoji { font-size: 0.85em; margin-right: 0.45em; }
-.roll-up { animation: roll-up 280ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
-.roll-down { animation: roll-down 280ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
-@keyframes roll-up { from { transform: translateY(80%); opacity: 0; filter: blur(3px); } to { transform: none; opacity: 1; filter: none; } }
-@keyframes roll-down { from { transform: translateY(-80%); opacity: 0; filter: blur(3px); } to { transform: none; opacity: 1; filter: none; } }
+.wheel {
+  position: relative; justify-self: start; height: 4.05em; overflow: hidden; margin: -1.35em 0;
+  -webkit-mask-image: linear-gradient(transparent, #000 35%, #000 65%, transparent);
+  mask-image: linear-gradient(transparent, #000 35%, #000 65%, transparent);
+}
+.wheel-track { display: flex; flex-direction: column; padding-top: 1.35em; transition: transform 320ms cubic-bezier(0.25, 1, 0.35, 1); }
+.wheel-track.no-anim, .wheel-track.no-anim .wheel-item { transition: none; }
+.wheel-item {
+  display: flex; align-items: center; height: 1.35em; flex: none;
+  font-weight: 800; white-space: nowrap; transform-origin: left center;
+  transition: opacity 320ms ease, transform 320ms ease;
+}
+.wheel-emoji { font-size: 0.85em; margin-right: 0.4em; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .ghost, .solid {
   font: 600 0.88rem/1 var(--font-body); padding: 10px 18px; border-radius: 999px; cursor: pointer;
@@ -99,7 +151,7 @@
 .ghost:focus-visible, .solid:focus-visible, .thumb:focus-visible, .cover:focus-visible, .close:focus-visible, .links a:focus-visible {
   outline: 2px solid var(--ink); outline-offset: 2px;
 }
-.hint { margin: 0; font-size: 0.8rem; color: var(--dim); }
+.hint { margin: 0; font-size: 0.76rem; color: var(--dim); }
 .row { display: flex; gap: 10px; justify-content: center; }
 .place-bar { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .place-bar p { margin: 0; color: var(--dim); }
@@ -107,7 +159,7 @@
 
 /* Song card */
 .card {
-  position: absolute; left: 50%; bottom: 228px; z-index: 5;
+  position: absolute; left: 50%; bottom: calc(7% + 190px); z-index: 5;
   width: min(380px, calc(100% - 32px));
   transform: translateX(-50%);
   padding: 16px; border-radius: 20px;
@@ -164,14 +216,20 @@
 @keyframes shake { 20% { transform: rotate(-14deg); } 40% { transform: rotate(10deg); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(4deg); } }
 @keyframes shake-down { 25% { transform: translateY(4px) rotate(-6deg); } 50% { transform: translateY(1px) rotate(5deg); } 75% { transform: translateY(5px) rotate(-3deg); } }
 
+/* Tall, narrow screens: the board fills the width and the dock sits under it instead of inside it. */
+@media (max-aspect-ratio: 4/5) {
+  .stage { align-items: flex-start; padding-top: 16px; }
+  .board { width: 100%; }
+  .dock { top: calc(100% + 12px); bottom: auto; width: 100%; padding: 0; box-shadow: none; background: transparent; }
+  .card { position: fixed; bottom: 16px; }
+}
 @media (max-width: 560px) {
-  .dock { min-height: 190px; padding-top: 16px; gap: 14px; }
-  .card { bottom: 200px; }
-  .feeling { font-size: 1.35rem; }
   .cover { width: 76px; height: 76px; }
-  .axis-end { font-size: 0.58rem; }
+  .axis-end { font-size: 0.62rem; }
+  .banner nav { gap: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .roll-up, .roll-down, .card, .ask, .thumb span { animation: none !important; }
+  .card, .ask, .thumb span, .light.is-pinned::after { animation: none !important; }
+  .wheel-track, .wheel-item { transition: none; }
   .find { transition: none; }
 }
