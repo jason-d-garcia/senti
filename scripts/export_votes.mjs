@@ -1,5 +1,5 @@
 // Export every listener placement to CSV for retraining.
-// Usage: KV_REST_API_URL=... KV_REST_API_TOKEN=... node scripts/export_votes.mjs [--log] > votes.csv
+// Usage: KV_REST_API_URL=... KV_REST_API_TOKEN=... node scripts/export_votes.mjs [--log | --vibes] > votes.csv
 // (`vercel env pull` writes these to .env.local for the linked project.)
 
 const URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
@@ -17,6 +17,19 @@ async function redis(commands) {
   });
   if (!r.ok) throw new Error(`redis ${r.status}`);
   return (await r.json()).map((x) => x.result);
+}
+
+// --vibes: every vibe-tag submission (one row per tag) with the song's position when it was tagged.
+if (process.argv.includes("--vibes")) {
+  const [rows] = await redis([["LRANGE", "vibes:log", 0, -1]]);
+  const q = (s) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+  console.log("title,artist,tag,valence,arousal,time");
+  for (const r of rows) {
+    const x = JSON.parse(r);
+    const [title, artist] = x.song.split("|");
+    for (const tag of x.tags) console.log([q(title), q(artist), q(tag), x.v, x.a, new Date(x.t).toISOString()].join(","));
+  }
+  process.exit(0);
 }
 
 // --log: every vote from fb:log as CSV, including 👎 votes where the song wasn't placed.

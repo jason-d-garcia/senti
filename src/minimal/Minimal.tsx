@@ -9,6 +9,7 @@ import { sendVote, songKey, votedSongs } from "../feedback";
 import { Field } from "./Field";
 import type { FieldSong, Pt } from "./Field";
 import { AppleMusicLogo, SpotifyLogo } from "./logos";
+import { VibePicker } from "./VibePicker";
 import "./minimal.css";
 
 /** Emotion colours, the same as the classic map's quadrants. */
@@ -384,6 +385,7 @@ export default function Minimal() {
             {(pick.step === "thanks" || pick.step === "placed") && (
               <div className="ask">
                 <p className="ask-q">{pick.step === "thanks" ? "Glad it fit." : "Thanks, noted."}</p>
+                <VibePicker key={pick.song.id} song={songKey(pick.song)} at={{ v: pick.song.valence, a: pick.song.arousal }} />
                 <div className="row"><button type="button" className="ghost" onClick={findSong}>Another one</button></div>
               </div>
             )}
