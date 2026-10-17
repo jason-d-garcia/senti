@@ -126,7 +126,8 @@ export default function Minimal() {
   const [placeAt, setPlaceAt] = useState<Pt>(dot);
   const [pinned, setPinned] = useState(false);
   const [placePinned, setPlacePinned] = useState(false);
-  const [discover, setDiscover] = useState<{ center: Pt; section: string; near: string } | null>(null);
+  /** Zoomed-in view: where it's centred, which emotion's songs get covers, and the zoom (fixed once opened). */
+  const [discover, setDiscover] = useState<{ center: Pt; section: string; near: string | null; scale: number } | null>(null);
   const [covers, setCovers] = useState<Record<string, string | null>>({});
 
   // Page-wide glow and axes are centred on the board, wherever layout puts it.
@@ -201,8 +202,7 @@ export default function Minimal() {
     const { center } = discover;
     const d = (s: PlacedSong) => Math.hypot(s.valence - center.valence, s.arousal - center.arousal);
     const featured = songs.filter((s) => sectionOf(s) === discover.section).sort((a, b) => d(a) - d(b)).slice(0, FEATURED);
-    const spread = Math.max(...featured.map(d), 0.01);
-    const scale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, 0.6 / spread));
+    const { scale } = discover;
     const ids = new Set(featured.map((s) => s.id));
     const others = songs.filter((s) => !ids.has(s.id) && Math.abs(s.valence - center.valence) < 1.1 / scale
       && Math.abs(s.arousal - center.arousal) < 1.1 / scale).sort((a, b) => d(a) - d(b)).slice(0, OTHERS);
@@ -249,9 +249,16 @@ export default function Minimal() {
 
   const openDiscover = () => {
     if (!pick) return;
-    setDiscover({ center: { valence: pick.song.valence, arousal: pick.song.arousal }, section: sectionOf(pick.song), near: pick.song.title });
+    // Zoom far enough that the song's nearest neighbours in the same emotion spread across the view.
+    const center = { valence: pick.song.valence, arousal: pick.song.arousal }, section = sectionOf(pick.song);
+    const d = (s: PlacedSong) => Math.hypot(s.valence - center.valence, s.arousal - center.arousal);
+    const nearest = songs.filter((s) => sectionOf(s) === section).map(d).sort((a, b) => a - b).slice(0, FEATURED);
+    const scale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, 0.6 / Math.max(...nearest, 0.01)));
+    setDiscover({ center, section, near: pick.song.title, scale });
   };
   const closeDiscover = () => setDiscover(null);
+  // Dragging the zoomed map recentres it; covers follow whichever emotion is now in the middle.
+  const panTo = (center: Pt) => setDiscover((d) => d && { ...d, center, section: sectionOf(center), near: null });
   useEffect(() => {
     if (!discover) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeDiscover(); };
@@ -297,12 +304,12 @@ export default function Minimal() {
             pinned={placing ? placePinned : pinned}
             onPin={placing ? setPlacePinned : setPinned}
             placing={placing ? { at: placeAt, artwork: pick!.preview.artworkUrl, onMove: setPlaceAt } : undefined}
-            zoom={discover && view ? { center: discover.center, scale: view.scale, songs: fieldSongs, onSong: playNearby } : null}
+            zoom={discover && view ? { center: discover.center, scale: view.scale, songs: fieldSongs, onSong: playNearby, onPan: panTo } : null}
           />
 
           {discover && (
             <div className="discover-bar">
-              <p><span style={{ color: COLOR[EMOTIONS.find((e) => e.name === discover.section)?.mood ?? "mixed"] }}>{discover.section}</span> songs near <b>{discover.near}</b></p>
+              <p><span style={{ color: COLOR[EMOTIONS.find((e) => e.name === discover.section)?.mood ?? "mixed"] }}>{discover.section}</span> songs {discover.near ? <>near <b>{discover.near}</b></> : "here"} <span className="pan-hint">· drag to explore</span></p>
               <button type="button" className="minimize" onClick={closeDiscover} aria-label="Back to the full map" title="Back to the full map">
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />

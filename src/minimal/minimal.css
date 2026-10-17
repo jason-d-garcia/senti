@@ -76,7 +76,11 @@
   position: absolute; inset: 0;
   transition: transform 750ms cubic-bezier(0.65, 0, 0.25, 1);
 }
-.field.is-zoomed { cursor: default; }
+.field.is-zoomed { cursor: grab; }
+.field.is-panning { cursor: grabbing; }
+/* Follow the drag exactly; the eased transition is only for zooming in and out. */
+.field.is-panning .zoom-layer { transition: none; }
+.pan-hint { color: var(--dim); opacity: 0.7; }
 .sections { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 /* The in-board axes only show when zoomed in; the page-wide axes cover the rest. */
 .field-axis { position: absolute; background: rgba(200, 210, 240, 0.22); pointer-events: none; opacity: 0; transition: opacity 500ms ease; }

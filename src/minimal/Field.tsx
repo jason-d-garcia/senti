@@ -32,7 +32,7 @@ interface Props {
   /** While placing a song, the pointer moves the song marker instead of the dot. */
   placing?: { at: Pt; artwork?: string; onMove: (p: Pt) => void };
   /** Zoomed in on part of the map, showing songs there. */
-  zoom?: { center: Pt; scale: number; songs: FieldSong[]; onSong: (id: string) => void } | null;
+  zoom?: { center: Pt; scale: number; songs: FieldSong[]; onSong: (id: string) => void; onPan: (center: Pt) => void } | null;
 }
 
 const pct = (p: Pt) => ({ x: ((p.valence + 1) / 2) * 100, y: ((1 - p.arousal) / 2) * 100 });
@@ -42,6 +42,9 @@ const pos = (p: Pt) => { const { x, y } = pct(p); return { left: `${x}%`, top: `
 export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, zoom }: Props) {
   const [ghost, setGhost] = useState<Pt | null>(null);
   const [overLight, setOverLight] = useState(false);
+  // Panning the zoomed map: where the drag started, and the centre it would move to.
+  const pan = useRef<{ x: number; y: number; from: Pt } | null>(null);
+  const [panCenter, setPanCenter] = useState<Pt | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const light = useRef<HTMLSpanElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -143,8 +146,17 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     return Math.hypot(e.clientX - (box.left + (x / 100) * box.width), e.clientY - (box.top + (y / 100) * box.height)) < GRAB_RADIUS;
   };
 
+  const panMove = (e: PointerEvent<HTMLDivElement>) => {
+    const box = ref.current?.getBoundingClientRect();
+    if (!pan.current || !box || !zoom) return;
+    const k = zoom.scale;
+    setPanCenter({
+      valence: clamp(pan.current.from.valence - ((e.clientX - pan.current.x) / (box.width / 2)) / k),
+      arousal: clamp(pan.current.from.arousal + ((e.clientY - pan.current.y) / (box.height / 2)) / k),
+    });
+  };
   const follow = (e: PointerEvent<HTMLDivElement>) => {
-    if (zoomed) return;
+    if (zoomed) { panMove(e); return; }
     // Mouse and pen: the light follows until a click drops it. Touch: it moves while the finger is down.
     const p = toPt(e.clientX, e.clientY);
     if (!p) return;
@@ -161,8 +173,8 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     moveNow(p);
   };
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (zoomed) return;
     e.currentTarget.setPointerCapture(e.pointerId);
+    if (zoom) { pan.current = { x: e.clientX, y: e.clientY, from: zoom.center }; return; }
     setGhost(null);
     // Clicking a dropped light picks it up so it follows the pointer again.
     if (pinned && !placing && e.pointerType !== "touch" && nearLight(e)) {
@@ -174,9 +186,15 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     onPin(true);
     follow(e);
   };
-  const onPointerUp = () => { pressed.current = false; };
+  const endPan = () => {
+    if (pan.current && panCenter && zoom) zoom.onPan(panCenter);
+    pan.current = null;
+    setPanCenter(null);
+  };
+  const onPointerUp = () => { pressed.current = false; endPan(); };
   const onPointerLeave = (e: PointerEvent<HTMLDivElement>) => {
     pressed.current = false;
+    if (zoomed) { endPan(); return; }
     setGhost(null); setOverLight(false);
     if (zoomed || e.pointerType === "touch" || pinned) return;
     const exit = toPt(e.clientX, e.clientY), now = performance.now();
@@ -198,16 +216,16 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   };
 
   const active = emotionAt(at.valence, at.arousal);
-  const c = zoom ? pct(zoom.center) : { x: 50, y: 50 };
+  const c = zoom ? pct(panCenter ?? zoom.center) : { x: 50, y: 50 };
   const k = zoom?.scale ?? 1;
 
   return (
     <div
       ref={ref}
-      className={`field${placing ? " is-placing" : ""}${pinned ? " is-pinned" : ""}${zoomed ? " is-zoomed" : ""}${overLight ? " over-light" : ""}`}
+      className={`field${placing ? " is-placing" : ""}${pinned ? " is-pinned" : ""}${zoomed ? " is-zoomed" : ""}${panCenter ? " is-panning" : ""}${overLight ? " over-light" : ""}`}
       role={zoomed ? "group" : "slider"}
       tabIndex={zoomed ? -1 : 0}
-      aria-label={zoomed ? "Songs nearby" : placing ? "Song position. Click or use arrow keys."
+      aria-label={zoomed ? "Songs nearby. Drag to move around." : placing ? "Song position. Click or use arrow keys."
         : "Mood. Move the pointer and click to drop the light, or use arrow keys: left and right for how good it feels, up and down for energy."}
       aria-valuetext={zoomed ? undefined : active?.name ?? "Mixed"}
       onPointerDown={onPointerDown}
