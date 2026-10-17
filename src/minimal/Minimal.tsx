@@ -278,20 +278,6 @@ export default function Minimal() {
   };
 
   const idx = emotion ? EMOTIONS.indexOf(emotion) : WHEEL.length - 1;
-
-  // Where the zoomed view's light comes from: off-screen, in the direction of the map's centre.
-  const zoomLight = useMemo(() => {
-    if (!discover) return {};
-    const c = livePan ?? discover.center;
-    const len = Math.hypot(c.valence, c.arousal);
-    // Screen x grows with valence, screen y shrinks with arousal; the centre is the opposite way.
-    const [dx, dy] = len < 0.02 ? [0, 0] : [-c.valence / len, c.arousal / len];
-    return {
-      "--lx": `calc(var(--cx, 50%) + ${dx} * var(--bh, 40vh) * 1.15)`,
-      "--ly": `calc(var(--cy, 50%) + ${dy} * var(--bh, 40vh) * 1.15)`,
-      "--tint": labelColor(discover.section),
-    } as React.CSSProperties;
-  }, [discover, livePan]);
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
@@ -311,7 +297,6 @@ export default function Minimal() {
         } : {}) as React.CSSProperties}
       >
         <div className="page-glow" aria-hidden="true" />
-        <div className="zoom-light" aria-hidden="true" style={zoomLight} />
         <div className="page-axes" aria-hidden="true">
           <span className="axis axis-x" /><span className="axis axis-y" />
           <span className="axis-end end-right">Feels good →</span>
