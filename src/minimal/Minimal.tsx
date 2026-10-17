@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import catalogJson from "../data/catalog.json";
 import { loadHits } from "../catalog";
 import { EMOTIONS, MIXED_EMOJI, emotionAt, placeSong, spotifySearchUrl } from "../mood";
@@ -7,7 +7,7 @@ import { findPreview } from "../preview";
 import type { Preview } from "../preview";
 import { sendVote, songKey, votedSongs } from "../feedback";
 import { Field } from "./Field";
-import type { Pt } from "./Field";
+import type { FieldSong, Pt } from "./Field";
 import { AppleMusicLogo, SpotifyLogo } from "./logos";
 import "./minimal.css";
 
@@ -16,6 +16,11 @@ const COLOR: Record<Mood | "mixed", string> = {
   happy: "#f6b93b", angry: "#f0604d", sad: "#5b8cff", relaxed: "#31c9a3", mixed: "#b8c4e8",
 };
 const PREVIEW_VOLUME = 0.4;
+/** Discover view: zoom range, how many nearby songs get cover art, and their size in pixels. */
+const MIN_ZOOM = 3, MAX_ZOOM = 40;
+const FEATURED = 14;
+const COVER_PX = 46;
+const OTHERS = 160;
 /** Songs tried before giving up on finding one with a preview. */
 const TRIES = 6;
 
@@ -37,12 +42,19 @@ const WHEEL = [...EMOTIONS.map((e) => ({ name: e.name, emoji: e.emoji, color: CO
 const COPIES = 5;
 
 /** "I'm feeling …", with the emotion on a vertical picker wheel that turns to follow the light. */
-function Feeling({ dot }: { dot: Pt }) {
-  const e = emotionAt(dot.valence, dot.arousal);
-  const idx = e ? EMOTIONS.indexOf(e) : WHEEL.length - 1;
+const Feeling = memo(function Feeling({ idx }: { idx: number }) {
   // Continuous wheel position: move to the nearest copy of the new emotion so the wheel takes the short way round.
   const [pos, setPos] = useState(idx + WHEEL.length * Math.floor(COPIES / 2));
   const [animate, setAnimate] = useState(true);
+  // Neighbouring entries show only while the wheel is turning.
+  const [turning, setTurning] = useState(false);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    setTurning(true);
+    const t = setTimeout(() => setTurning(false), 650);
+    return () => clearTimeout(t);
+  }, [idx]);
   useEffect(() => {
     setPos((cur) => {
       const n = WHEEL.length;
@@ -74,7 +86,7 @@ function Feeling({ dot }: { dot: Pt }) {
             return (
               <span key={i} className="wheel-item" style={{
                 color: w.color,
-                opacity: d === 0 ? 1 : Math.max(0, 0.32 - (Math.abs(d) - 1) * 0.2),
+                opacity: d === 0 ? 1 : turning ? Math.max(0, 0.32 - (Math.abs(d) - 1) * 0.2) : 0,
                 transform: `perspective(300px) rotateX(${-d * 28}deg) scale(${1 - Math.abs(d) * 0.08})`,
               }}>
                 <span className="wheel-emoji">{w.emoji}</span>{w.name.toLowerCase()}
@@ -85,7 +97,7 @@ function Feeling({ dot }: { dot: Pt }) {
       </span>
     </h1>
   );
-}
+});
 
 const LINKS = [
   { label: "How it works", href: "?classic" },
@@ -112,6 +124,25 @@ export default function Minimal() {
   const [placeAt, setPlaceAt] = useState<Pt>(dot);
   const [pinned, setPinned] = useState(false);
   const [placePinned, setPlacePinned] = useState(false);
+  const [discover, setDiscover] = useState<{ center: Pt; section: string; near: string } | null>(null);
+  const [covers, setCovers] = useState<Record<string, string | null>>({});
+
+  // Page-wide glow and axes are centred on the board, wherever layout puts it.
+  const stage = useRef<HTMLElement>(null);
+  const board = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const s = stage.current?.getBoundingClientRect(), b = board.current?.getBoundingClientRect();
+      if (!s || !b || !stage.current) return;
+      stage.current.style.setProperty("--cx", `${b.left - s.left + b.width / 2}px`);
+      stage.current.style.setProperty("--cy", `${b.top - s.top + b.height / 2}px`);
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    if (stage.current) ro.observe(stage.current);
+    if (board.current) ro.observe(board.current);
+    return () => ro.disconnect();
+  }, []);
   const audio = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -153,12 +184,87 @@ export default function Minimal() {
     });
   };
   const thumbsUp = () => { vote(true); setPick((p) => p && { ...p, step: "thanks" }); };
-  const thumbsDown = () => { setPlaceAt(dot); setPlacePinned(false); setPick((p) => p && { ...p, step: "place" }); };
+  const thumbsDown = () => { setDiscover(null); setPlaceAt(dot); setPlacePinned(false); setPick((p) => p && { ...p, step: "place" }); };
   const savePlace = () => { vote(false, placeAt); setPick((p) => p && { ...p, step: "placed" }); };
   const skipPlace = () => { vote(false); setPick((p) => p && { ...p, step: "placed" }); };
   const close = () => { audio.current?.pause(); setPick(null); };
 
   const placing = pick?.step === "place";
+
+  // Discover: zoom in around the song, far enough that its nearest neighbours in the same emotion spread
+  // across the view (songs cluster tightly), and show what else is nearby.
+  const view = useMemo(() => {
+    if (!discover) return null;
+    const { center } = discover;
+    const d = (s: PlacedSong) => Math.hypot(s.valence - center.valence, s.arousal - center.arousal);
+    const featured = songs.filter((s) => sectionOf(s) === discover.section).sort((a, b) => d(a) - d(b)).slice(0, FEATURED);
+    const spread = Math.max(...featured.map(d), 0.01);
+    const scale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, 0.6 / spread));
+    const ids = new Set(featured.map((s) => s.id));
+    const others = songs.filter((s) => !ids.has(s.id) && Math.abs(s.valence - center.valence) < 1.1 / scale
+      && Math.abs(s.arousal - center.arousal) < 1.1 / scale).sort((a, b) => d(a) - d(b)).slice(0, OTHERS);
+    // Nudge covers apart so they don't stack (display positions only; true positions are kept for votes).
+    const half = (board.current?.getBoundingClientRect().width ?? 600) / 2;
+    const gap = (COVER_PX + 6) / (half * scale);
+    const at = featured.map((s) => ({ v: s.valence, a: s.arousal }));
+    for (let it = 0; it < 60; it++) {
+      for (let i = 0; i < at.length; i++) for (let j = i + 1; j < at.length; j++) {
+        const dv = at[j].v - at[i].v, da = at[j].a - at[i].a, dist = Math.hypot(dv, da) || 1e-6;
+        if (dist >= gap) continue;
+        const push = (gap - dist) / 2, ux = dist > 1e-6 ? dv / dist : Math.cos(i + j), uy = dist > 1e-6 ? da / dist : Math.sin(i + j);
+        at[i].v -= ux * push; at[i].a -= uy * push; at[j].v += ux * push; at[j].a += uy * push;
+      }
+    }
+    return { scale, items: [
+      ...others.map((s) => ({ song: s, featured: false, v: s.valence, a: s.arousal })),
+      ...featured.map((s, i) => ({ song: s, featured: true, v: at[i].v, a: at[i].a })),
+    ] };
+  }, [discover, songs]);
+  const nearby = view?.items ?? [];
+
+  // Fetch covers for the featured songs a few at a time (the iTunes search allows about 20 lookups a minute).
+  useEffect(() => {
+    if (!discover) return;
+    let cancelled = false;
+    const todo = nearby.filter((n) => n.featured && !(n.song.id in covers)).map((n) => n.song);
+    (async () => {
+      for (const s of todo) {
+        if (cancelled) return;
+        const p = await findPreview(s);
+        if (cancelled) return;
+        setCovers((c) => ({ ...c, [s.id]: p?.artworkUrl ?? null }));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discover, nearby]);
+
+  const fieldSongs: FieldSong[] = nearby.map(({ song, featured, v, a }) => ({
+    id: song.id, valence: v, arousal: a, title: `${song.title} · ${song.artist}`, featured,
+    color: COLOR[emotionAt(song.valence, song.arousal)?.mood ?? "mixed"], artwork: covers[song.id] ?? undefined,
+  }));
+
+  const openDiscover = () => {
+    if (!pick) return;
+    setDiscover({ center: { valence: pick.song.valence, arousal: pick.song.arousal }, section: sectionOf(pick.song), near: pick.song.title });
+  };
+  const closeDiscover = () => setDiscover(null);
+  useEffect(() => {
+    if (!discover) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeDiscover(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [discover]);
+
+  const playNearby = async (id: string) => {
+    const s = songs.find((x) => x.id === id);
+    if (!s) return;
+    audio.current?.pause();
+    const p = await findPreview(s);
+    if (p) { setPick({ song: s, preview: p, step: "listen" }); setProgress(0); setPlaying(false); }
+  };
+
+  const idx = emotion ? EMOTIONS.indexOf(emotion) : WHEEL.length - 1;
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
@@ -170,8 +276,16 @@ export default function Minimal() {
         </nav>
       </header>
 
-      <main className="stage">
-        <div className="board">
+      <main className={`stage${discover ? " is-discovering" : ""}`} ref={stage}>
+        <div className="page-glow" aria-hidden="true" />
+        <div className="page-axes" aria-hidden="true">
+          <span className="axis axis-x" /><span className="axis axis-y" />
+          <span className="axis-end end-right">Feels good →</span>
+          <span className="axis-end end-left">← Feels bad</span>
+          <span className="axis-end end-top">↑ Energetic</span>
+          <span className="axis-end end-bottom">↓ Calm</span>
+        </div>
+        <div className="board" ref={board}>
           <Field
             dot={dot}
             onMove={setDot}
@@ -179,9 +293,21 @@ export default function Minimal() {
             pinned={placing ? placePinned : pinned}
             onPin={placing ? setPlacePinned : setPinned}
             placing={placing ? { at: placeAt, artwork: pick!.preview.artworkUrl, onMove: setPlaceAt } : undefined}
+            zoom={discover && view ? { center: discover.center, scale: view.scale, songs: fieldSongs, onSong: playNearby } : null}
           />
 
-          <div className="dock">
+          {discover && (
+            <div className="discover-bar">
+              <p><span style={{ color: COLOR[EMOTIONS.find((e) => e.name === discover.section)?.mood ?? "mixed"] }}>{discover.section}</span> songs near <b>{discover.near}</b></p>
+              <button type="button" className="minimize" onClick={closeDiscover} aria-label="Back to the full map" title="Back to the full map">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          <div className="dock" aria-hidden={discover ? true : undefined}>
             {placing ? (
               <div className="place-bar">
                 <p>Click where <b>{pick!.song.title}</b> belongs: <span style={{ color: COLOR[emotionAt(placeAt.valence, placeAt.arousal)?.mood ?? "mixed"] }}>{sectionOf(placeAt)}</span></p>
@@ -192,7 +318,7 @@ export default function Minimal() {
               </div>
             ) : (
               <>
-                <Feeling dot={dot} />
+                <Feeling idx={idx} />
                 <button type="button" className="find" onClick={findSong} disabled={finding || !songs.length}>
                   <span className="find-icon" aria-hidden="true">▶</span>
                   {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
@@ -224,6 +350,11 @@ export default function Minimal() {
             </div>
           </div>
 
+          {!discover && (
+            <button type="button" className="discover-link" onClick={openDiscover}>
+              Discover more {sectionOf(pick.song).toLowerCase()} songs <span aria-hidden="true">→</span>
+            </button>
+          )}
           {pick.step === "ask" && (
             <div className="ask">
               <p className="ask-q">How did we do?</p>
