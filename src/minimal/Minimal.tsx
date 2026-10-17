@@ -99,6 +99,8 @@ const Feeling = memo(function Feeling({ idx }: { idx: number }) {
   );
 });
 
+const labelColor = (name: string) => COLOR[EMOTIONS.find((e) => e.name === name)?.mood ?? "mixed"];
+
 const LINKS = [
   { label: "How it works", href: "?classic" },
   { label: "Data & model", href: "https://github.com/jason-d-garcia/moodify/blob/main/data/README.md" },
@@ -288,6 +290,7 @@ export default function Minimal() {
         <div className="board" ref={board}>
           <Field
             dot={dot}
+            labelColor={labelColor}
             onMove={setDot}
             color={color}
             pinned={placing ? placePinned : pinned}
@@ -307,7 +310,7 @@ export default function Minimal() {
             </div>
           )}
 
-          <div className="dock" aria-hidden={discover ? true : undefined}>
+          <div className={`dock${!pinned && !placing ? " is-collapsed" : ""}`} aria-hidden={discover ? true : undefined}>
             {placing ? (
               <div className="place-bar">
                 <p>Click where <b>{pick!.song.title}</b> belongs: <span style={{ color: COLOR[emotionAt(placeAt.valence, placeAt.arousal)?.mood ?? "mixed"] }}>{sectionOf(placeAt)}</span></p>
@@ -319,12 +322,15 @@ export default function Minimal() {
             ) : (
               <>
                 <Feeling idx={idx} />
-                <button type="button" className="find" onClick={findSong} disabled={finding || !songs.length}>
-                  <span className="find-icon" aria-hidden="true">▶</span>
-                  {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
-                </button>
-                <p className="hint">{notFound ? "Couldn't find a playable song here. Try another spot."
-                  : pinned ? "Light dropped. Click anywhere to move it." : "Move to explore, click to drop the light."}</p>
+                {/* Opens once the light is dropped; folds away again when it's picked up. */}
+                <div className="dock-more" aria-hidden={!pinned ? true : undefined}>
+                  <button type="button" className="find" onClick={findSong} disabled={finding || !songs.length} tabIndex={pinned ? 0 : -1}>
+                    <span className="find-icon" aria-hidden="true">▶</span>
+                    {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
+                  </button>
+                  <p className="hint">{notFound ? "Couldn't find a playable song here. Try another spot."
+                    : "Click anywhere to move the light, or click it to pick it up."}</p>
+                </div>
               </>
             )}
           </div>

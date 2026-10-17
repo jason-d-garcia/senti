@@ -112,7 +112,31 @@
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 .minimize:hover, .minimize:focus-visible { border-color: var(--glow); box-shadow: 0 0 16px -4px var(--glow); outline: none; }
-.dock { transition: opacity 400ms ease, transform 400ms ease; }
+.dock { transition: opacity 400ms ease, transform 400ms ease, padding 400ms ease, width 400ms ease; }
+/* Minimised: just "I'm feeling …" until the light is dropped. */
+.dock.is-collapsed { width: min(360px, 80%); padding: 8px 18px; }
+.dock-more {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  max-height: 140px; margin-top: 14px; overflow: hidden; opacity: 1;
+  transition: max-height 420ms cubic-bezier(0.3, 1, 0.4, 1), margin-top 420ms ease, opacity 300ms ease 80ms;
+}
+.dock.is-collapsed .dock-more { max-height: 0; margin-top: 0; opacity: 0; transition: max-height 320ms ease, margin-top 320ms ease, opacity 150ms ease; }
+.dock-more .find { margin-top: 2px; }
+
+/* Emotion names on the map: faint, brighter and larger in the light's section, clearer while placing a song. */
+.emotion-label {
+  position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--k, 1)));
+  font: 700 0.8rem/1 var(--font-display); letter-spacing: 0.02em; white-space: nowrap;
+  opacity: 0.22; pointer-events: none; user-select: none;
+  transition: opacity 300ms ease, transform 300ms ease, text-shadow 300ms ease;
+}
+.emotion-label.is-active {
+  opacity: 1; transform: translate(-50%, -50%) scale(calc(1.4 / var(--k, 1)));
+  text-shadow: 0 0 14px currentColor;
+}
+.field.is-placing .emotion-label { opacity: 0.62; }
+.field.is-placing .emotion-label.is-active { opacity: 1; }
+.field.is-zoomed .emotion-label { opacity: 0; }
 .stage.is-discovering .dock { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px); }
 .stage.is-discovering .card { bottom: 4%; }
 .discover-link {
@@ -156,10 +180,10 @@
 
 /* Dock: a cutout in the lower middle of the board; the field's lines and glow stop at its edge. */
 .dock {
-  position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); z-index: 4;
+  position: absolute; left: 50%; bottom: 2.5%; transform: translateX(-50%); z-index: 4;
   width: min(440px, 88%);
-  display: flex; flex-direction: column; align-items: center; gap: 14px;
-  padding: 18px 20px 16px; border-radius: 28px;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  padding: 14px 20px; border-radius: 28px;
   background: #06070d;
   box-shadow: 0 0 24px 18px #06070d;
   text-align: center;
@@ -222,7 +246,7 @@
 
 /* Song card */
 .card {
-  position: absolute; left: 50%; bottom: calc(7% + 190px); z-index: 5;
+  position: absolute; left: 50%; bottom: calc(2.5% + 170px); z-index: 5;
   width: min(380px, calc(100% - 32px));
   transform: translateX(-50%);
   padding: 16px; border-radius: 20px;

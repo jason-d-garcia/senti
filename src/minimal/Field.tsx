@@ -21,6 +21,8 @@ interface Particle { x: number; y: number; vx: number; vy: number; born: number;
 
 interface Props {
   dot: Pt;
+  /** Label colour per emotion name. */
+  labelColor: (name: string) => string;
   onMove: (p: Pt) => void;
   /** CSS colour of the dot's current emotion, used for its glow and sparkles. */
   color: string;
@@ -37,7 +39,7 @@ const pct = (p: Pt) => ({ x: ((p.valence + 1) / 2) * 100, y: ((1 - p.arousal) / 
 const pos = (p: Pt) => { const { x, y } = pct(p); return { left: `${x}%`, top: `${y}%` }; };
 
 /** The mood map: faint section lines, a light that follows the pointer shedding sparkles, and a zoomed song view. */
-export function Field({ dot, onMove, color, pinned, onPin, placing, zoom }: Props) {
+export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, zoom }: Props) {
   const [ghost, setGhost] = useState<Pt | null>(null);
   const [overLight, setOverLight] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -229,6 +231,16 @@ export function Field({ dot, onMove, color, pinned, onPin, placing, zoom }: Prop
           ))}
           <ellipse cx="0" cy="0" rx={MIXED_RADIUS} ry={MIXED_RADIUS} />
         </svg>
+        {EMOTIONS.map((e) => {
+          const mid = rad((e.from + e.to) / 2);
+          return (
+            <span key={e.name} aria-hidden="true"
+              className={`emotion-label${active === e ? " is-active" : ""}`}
+              style={{ ...pos({ valence: 0.66 * Math.cos(mid), arousal: 0.66 * Math.sin(mid) }), color: labelColor(e.name) }}>
+              {e.name}
+            </span>
+          );
+        })}
         <span className="field-axis axis-x" aria-hidden="true" />
         <span className="field-axis axis-y" aria-hidden="true" />
 
