@@ -219,7 +219,8 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   };
 
   const active = emotionAt(at.valence, at.arousal);
-  const c = zoom ? pct(panCenter ?? zoom.center) : { x: 50, y: 50 };
+  const zc = zoom ? panCenter ?? zoom.center : { valence: 0, arousal: 0 };
+  const c = zoom ? pct(zc) : { x: 50, y: 50 };
   const k = zoom?.scale ?? 1;
 
   return (
@@ -238,6 +239,18 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
       onPointerLeave={onPointerLeave}
       onKeyDown={onKeyDown}
     >
+      {/* Outside the scaled layer: CSS-scaling a layer rasterises it, which turns hairlines into
+          bands. The zoom is applied as an SVG transform instead, so lines stay one pixel wide. */}
+      <svg className="sections" viewBox="-1 -1 2 2" preserveAspectRatio="none" aria-hidden="true">
+        <g className="sections-g" style={{ transform: zoom ? `scale(${k}) translate(${-zc.valence}px, ${zc.arousal}px)` : "none" }}>
+          {EMOTIONS.map((e) => (
+            // Quadrant boundaries are the axes: drawn by the page outside the zoom, here only when zoomed in.
+            <line key={e.name} className={e.from % 90 === 0 ? "axis-line" : undefined}
+              x1="0" y1="0" x2={1.5 * Math.cos(rad(e.from))} y2={-1.5 * Math.sin(rad(e.from))} />
+          ))}
+          <ellipse cx="0" cy="0" rx={MIXED_RADIUS} ry={MIXED_RADIUS} />
+        </g>
+      </svg>
       <div
         className="zoom-layer"
         style={{
@@ -246,12 +259,6 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
           "--k": k,
         } as React.CSSProperties}
       >
-        <svg className="sections" viewBox="-1 -1 2 2" preserveAspectRatio="none" aria-hidden="true">
-          {EMOTIONS.map((e) => e.from % 90 !== 0 && (
-            <line key={e.name} x1="0" y1="0" x2={1.5 * Math.cos(rad(e.from))} y2={-1.5 * Math.sin(rad(e.from))} />
-          ))}
-          <ellipse cx="0" cy="0" rx={MIXED_RADIUS} ry={MIXED_RADIUS} />
-        </svg>
         {EMOTIONS.map((e) => {
           const mid = rad((e.from + e.to) / 2);
           return (
@@ -262,8 +269,6 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
             </span>
           );
         })}
-        <span className="field-axis axis-x" aria-hidden="true" />
-        <span className="field-axis axis-y" aria-hidden="true" />
 
         {zoom?.songs.map((s) => (
           <button
