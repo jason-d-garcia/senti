@@ -104,6 +104,8 @@ is limited to 20 ratings a minute.
 Ratings are stored by `api/feedback.js` in Upstash Redis. To turn sharing on, add Upstash for Redis
 to the Vercel project (Storage > Upstash); it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
 Without it, ratings stay in each visitor's own browser.
+`scripts/export_votes.mjs` writes every placement to CSV (song, spot, blind or not, time) for
+retraining; titles and artists are lowercased.
 
 ## Run
 
