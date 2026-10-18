@@ -10,6 +10,7 @@ import { Field } from "./Field";
 import type { FieldSong, Pt } from "./Field";
 import { AppleMusicLogo, SpotifyLogo } from "./logos";
 import { VibePicker } from "./VibePicker";
+import { share, sharedSongKey, songLink } from "../share";
 import "./minimal.css";
 
 /** Emotion colours, the same as the classic map's quadrants. */
@@ -194,6 +195,35 @@ export default function Minimal() {
   const skipPlace = () => { vote(false); setPick((p) => p && { ...p, step: "placed" }); };
   const close = () => { audio.current?.pause(); setPick(null); };
 
+  // Sharing: a song link opens the site on that song; the banner shares the site itself.
+  const [shareNote, setShareNote] = useState<string | null>(null);
+  const flash = (msg: string) => { setShareNote(msg); setTimeout(() => setShareNote(null), 2200); };
+  const shareSong = async () => {
+    if (!pick) return;
+    const e = sectionOf(pick.song).toLowerCase();
+    const r = await share({ title: "Moodify", url: songLink(pick.song),
+      text: `I'm feeling ${e}: ${pick.song.title} by ${pick.song.artist}, found on Moodify` });
+    if (r === "copied") flash("Link copied");
+  };
+  const shareSite = async () => {
+    const r = await share({ title: "Moodify", url: window.location.origin,
+      text: "Moodify: pick a feeling, get a song that fits it." });
+    if (r === "copied") flash("Link copied");
+  };
+
+  // Opened from a share link: put the light on that song and show its card.
+  const opened = useRef(false);
+  useEffect(() => {
+    const key = sharedSongKey();
+    if (opened.current || !key || !hits.length) return;
+    opened.current = true;
+    const s = songs.find((x) => songKey(x) === key);
+    if (!s) return;
+    setDot({ valence: s.valence, arousal: s.arousal });
+    setPinned(true);
+    findPreview(s).then((p) => { if (p) { setPick({ song: s, preview: p, step: "listen" }); setProgress(0); } });
+  }, [hits, songs]);
+
   const placing = pick?.step === "place";
 
   // Discover: zoom in around the song, far enough that its nearest neighbours in the same emotion spread
@@ -286,6 +316,7 @@ export default function Minimal() {
           {LINKS.map((l) => (
             <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
           ))}
+          <button type="button" className="banner-share" onClick={shareSite}>Share Moodify</button>
         </nav>
       </header>
 
@@ -371,6 +402,12 @@ export default function Minimal() {
                 <div className="links">
                   <a href={spotifySearchUrl(pick.song)} target="_blank" rel="noreferrer" onClick={touched}><SpotifyLogo /> Spotify</a>
                   <a href={pick.preview.pageUrl} target="_blank" rel="noreferrer" onClick={touched}><AppleMusicLogo /> Apple Music</a>
+                  <button type="button" className="share-btn" onClick={shareSong} aria-label={`Share ${pick.song.title}`}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
+                    </svg>
+                    Share
+                  </button>
                 </div>
               </div>
             </div>
@@ -400,6 +437,8 @@ export default function Minimal() {
           </div>
         )}
       </main>
+
+      {shareNote && <div className="toast" role="status">{shareNote}</div>}
 
       <audio
         ref={audio}
