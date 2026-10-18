@@ -106,7 +106,7 @@ const labelColor = (name: string) => COLOR[EMOTIONS.find((e) => e.name === name)
 /** Phones and tablets: say "tap", not "click". */
 const TOUCH = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 
-const REPO = "https://github.com/jason-d-garcia/moodify";
+const REPO = "https://github.com/jason-d-garcia/senti";
 
 export default function Minimal() {
   const [hits, setHits] = useState<PlacedSong[]>([]);
