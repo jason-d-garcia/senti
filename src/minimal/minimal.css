@@ -10,7 +10,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   --card: rgba(16, 19, 30, 0.86);
   position: fixed; inset: 0;
   display: flex; flex-direction: column;
-  background: #05060b;
+  background: radial-gradient(120% 90% at 50% 40%, #0b0e18 0%, #05060b 70%);
   color: var(--ink);
   font-family: var(--font-body);
   overflow: hidden;
@@ -23,6 +23,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .banner {
   flex: none; height: 56px; padding: 0 22px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  border-bottom: 1px solid rgba(160, 175, 220, 0.08);
   font-size: 1.05rem;
 }
 /* With a mouse, the banner floats over the top of the page and fades in only while the pointer is over it
@@ -85,8 +86,9 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .axis-y { top: 0; bottom: 0; left: var(--cx, 50%); width: 1px; }
 .axis-end {
   position: absolute; user-select: none; white-space: nowrap;
-  font: 700 1.3rem/1 var(--font-body); letter-spacing: -0.005em;
+  font: 700 1.25rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
   color: #fff;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.55), 0 0 22px rgba(255, 255, 255, 0.25);
 }
 .end-right { right: 18px; top: calc(var(--cy, 50%) + 12px); }
 .end-left { left: 18px; top: calc(var(--cy, 50%) + 12px); }
@@ -177,12 +179,13 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .emotion-label {
   --grow: 1.8;
   position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--k, 1)));
-  font: 600 1rem/1 var(--font-body); white-space: nowrap;
+  font: 600 0.86rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
   opacity: 0.4; pointer-events: none; user-select: none;
-  transition: opacity 300ms ease, transform 300ms ease;
+  transition: opacity 300ms ease, transform 300ms ease, text-shadow 300ms ease;
 }
 .emotion-label.is-active {
   opacity: 1; transform: translate(-50%, -50%) scale(calc(var(--grow) / var(--k, 1)));
+  text-shadow: 0 0 14px currentColor;
 }
 .emotion-label.hug-l { transform: translate(calc(-100% + 6px), -50%) scale(calc(1 / var(--k, 1))); transform-origin: right center; }
 .emotion-label.hug-r { transform: translate(-6px, -50%) scale(calc(1 / var(--k, 1))); transform-origin: left center; }
@@ -277,9 +280,10 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   display: inline-flex; align-items: center; gap: 10px;
   font: 700 1.1rem/1 var(--font-body); padding: 16px 28px 16px 22px; border-radius: 999px; cursor: pointer;
   color: #05060b; background: var(--glow); border: 0;
-  transition: background 300ms ease, transform 160ms ease;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset, 0 10px 34px -10px var(--glow), 0 0 44px -14px var(--glow);
+  transition: background 300ms ease, box-shadow 300ms ease, transform 160ms ease;
 }
-.find:hover:not(:disabled) { transform: translateY(-1px) scale(1.03); }
+.find:hover:not(:disabled) { transform: translateY(-1px) scale(1.03); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset, 0 14px 40px -8px var(--glow), 0 0 60px -10px var(--glow); }
 .find:active:not(:disabled) { transform: scale(0.98); }
 .find:disabled { opacity: 0.7; cursor: progress; }
 .find:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
@@ -385,10 +389,10 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   .banner { height: 44px; padding: 0 18px; font-size: 0.82rem; }
   .brand { font-size: 1.5rem; }
   .banner nav { gap: 14px; overflow: visible; }
-  .axis-end { font-size: 0.95rem; }
+  .axis-end { font-size: 0.82rem; letter-spacing: 0.02em; }
   /* Phones: names as large as the width allows; the side axis titles sit lower, between the names
      just below the axis (Sad, Contented) and the next ring out. */
-  .emotion-label { --grow: 1.4; font-size: 0.9rem; }
+  .emotion-label { --grow: 1.4; font-size: 0.8rem; letter-spacing: 0; }
   .end-right, .end-left { top: calc(var(--cy, 50%) + 48px); }
   .end-right { right: 6px; }
   .end-left { left: 6px; }
@@ -432,11 +436,11 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .banner-share {
   display: inline-flex; align-items: center; gap: 6px;
   font: inherit; color: var(--ink); background: transparent; cursor: pointer; white-space: nowrap;
-  padding: 7px 14px; border-radius: 999px; border: 0; background: rgba(160, 175, 220, 0.12);
+  padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(160, 175, 220, 0.3);
   min-height: 36px; position: relative;
-  transition: background 200ms ease;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
-.banner-share:hover { background: rgba(160, 175, 220, 0.22); }
+.banner-share:hover { border-color: var(--glow); box-shadow: 0 0 14px -4px var(--glow); }
 .banner nav { align-items: center; }
 .toast {
   position: fixed; left: 50%; bottom: 28px; translate: -50% 0; z-index: 20;
