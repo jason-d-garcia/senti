@@ -1,4 +1,4 @@
-/** Share links: ?s=<song key> opens Senti on that song. */
+/** Share links: ?s=<song key> opens senti on that song. */
 import { songKey } from "./feedback";
 
 export const SHARE_PARAM = "s";

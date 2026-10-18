@@ -1,6 +1,6 @@
-# Senti
+# senti
 
-*Formerly Moodify. "Senti" is Italian for "you feel" or "listen", from* sentire.
+*Formerly Moodify. "senti" is Italian for "you feel" or "listen", from* sentire.
 
 Drag a point around a valence/arousal mood map and get songs that match, each with a
 Spotify link. No login.

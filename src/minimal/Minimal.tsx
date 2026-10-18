@@ -212,13 +212,13 @@ export default function Minimal() {
     if (!pick) return;
     const e = emotionAt(pick.song.valence, pick.song.arousal);
     const feeling = `I’m feeling ${(e?.name ?? "Mixed").toLowerCase()} ${e?.emoji ?? MIXED_EMOJI}`;
-    const r = await share({ title: "Senti", url: songLink(pick.song),
-      text: `${feeling}\n🎵 ${pick.song.title} by ${pick.song.artist}\n\nFind a song for how you feel on Senti:` });
+    const r = await share({ title: "senti", url: songLink(pick.song),
+      text: `${feeling}\n🎵 ${pick.song.title} by ${pick.song.artist}\n\nFind a song for how you feel on senti:` });
     if (r === "copied") flash("Link copied");
   };
   const shareSite = async () => {
-    const r = await share({ title: "Senti", url: window.location.origin,
-      text: "Senti: pick a feeling, get a song that fits it." });
+    const r = await share({ title: "senti", url: window.location.origin,
+      text: "senti: pick a feeling, get a song that fits it." });
     if (r === "copied") flash("Link copied");
   };
 
@@ -323,8 +323,8 @@ export default function Minimal() {
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
-        <span className="brand" translate="no"><span className="brand-dot" aria-hidden="true" />Senti</span>
-        <nav aria-label="About Senti">
+        <span className="brand" translate="no"><span className="brand-dot" aria-hidden="true" />senti</span>
+        <nav aria-label="About senti">
           <div className="banner-links">
             {LINKS.map((l) => (
               <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
@@ -338,7 +338,7 @@ export default function Minimal() {
               ))}
             </div>
           </details>
-          <button type="button" className="banner-share" onClick={shareSite}>Share<span className="wide-only"> Senti</span></button>
+          <button type="button" className="banner-share" onClick={shareSite}>Share<span className="wide-only"> senti</span></button>
         </nav>
       </header>
 
