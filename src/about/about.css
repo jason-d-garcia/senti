@@ -31,6 +31,13 @@ a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-rad
 }
 .brand { display: inline-flex; align-items: center; gap: 0.32em; font: 400 1.5rem/1 var(--font-brand); text-decoration: none; }
 .brand img { height: 0.78em; width: auto; }
+/* The wordmark sits in the middle of the header; the s: mark stays at the left. */
+.top { position: relative; }
+.brand-word { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+@media (max-width: 420px) {
+  .brand img { display: none; }
+  .brand-word { position: static; transform: none; }
+}
 .back { font: 600 1.08rem/1 "Figtree", system-ui, sans-serif; text-decoration: none; color: var(--muted); }
 .back:hover { color: var(--ink); }
 

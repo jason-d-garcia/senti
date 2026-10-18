@@ -321,7 +321,7 @@ export default function Minimal() {
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
-        <span className="brand" translate="no"><img className="brand-mark" src="/senti-mark.svg" alt="" width="36" height="26" />senti</span>
+        <span className="brand" translate="no"><img className="brand-mark" src="/senti-mark.svg" alt="" width="36" height="26" /><span className="brand-word">senti</span></span>
         <nav aria-label="About senti">
           <a href="about.html">About</a>
           <a href={REPO} target="_blank" rel="noreferrer" className="banner-icon" aria-label="Code on GitHub" title="Code on GitHub"><GitHubLogo /></a>

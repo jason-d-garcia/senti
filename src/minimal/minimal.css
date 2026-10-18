@@ -28,6 +28,9 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 }
 .brand { display: inline-flex; align-items: center; gap: 0.32em; font: 400 1.95rem/1 var(--font-brand); }
 .brand-mark { height: 0.78em; width: auto; }
+/* The wordmark sits in the middle of the banner; the s: mark stays at the left. */
+.banner { position: relative; }
+.brand-word { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 .banner nav { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; }
 .banner a { color: var(--muted); text-decoration: none; white-space: nowrap; transition: color 200ms ease; }
 .banner a:hover, .banner a:focus-visible { color: var(--ink); }
@@ -361,6 +364,9 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 
 
 @media (max-width: 560px) {
+  /* No room to centre the wordmark beside the links: show just the word, at the left. */
+  .brand-mark { display: none; }
+  .brand-word { position: static; transform: none; }
   .banner { height: 44px; padding: 0 18px; font-size: 0.82rem; }
   .brand { font-size: 1.5rem; }
   .banner nav { gap: 14px; overflow: visible; }
