@@ -184,6 +184,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .sections line, .sections ellipse {
   fill: none; stroke: rgba(160, 175, 220, 0.13); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 3 5;
 }
+.field:not(.is-zoomed) .sections line:not(.axis-line) { stroke: url(#sections-fade); }
 /* Larger than the board so sparkles follow the light out to the screen edge (the stage clips it). */
 .sparkles { position: absolute; left: -100vw; top: -100vh; width: calc(100% + 200vw); height: calc(100% + 200vh); pointer-events: none; }
 .light {

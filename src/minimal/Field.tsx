@@ -289,6 +289,14 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
       {/* Outside the scaled layer: CSS-scaling a layer rasterises it, which turns hairlines into
           bands. The zoom is applied as an SVG transform instead, so lines stay one pixel wide. */}
       <svg className="sections" viewBox="-1 -1 2 2" preserveAspectRatio="none" aria-hidden="true">
+        {/* Section lines run out to the sides, but fade away below the map instead of running past the
+            "I'm feeling" panel to the bottom of the screen. (y grows downward; the map ends at y = 1.) */}
+        <defs>
+          <linearGradient id="sections-fade" gradientUnits="userSpaceOnUse" x1="0" y1="0.9" x2="0" y2="1.45">
+            <stop offset="0" stopColor="rgb(160, 175, 220)" stopOpacity="0.13" />
+            <stop offset="1" stopColor="rgb(160, 175, 220)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
         <g className="sections-g" style={{ transform: zoom ? `scale(${k}) translate(${-zc.valence}px, ${zc.arousal}px)` : "none" }}>
           {EMOTIONS.map((e) => (
             // Quadrant boundaries are the axes: drawn by the page outside the zoom, here only when zoomed in.
