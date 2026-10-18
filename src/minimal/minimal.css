@@ -354,7 +354,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .banner-links { display: flex; gap: 18px; }
 
 @media (max-width: 560px) {
-  .banner-links, .wide-only { display: none; }
+  .banner-links { display: none; }
   .about-menu { display: block; }
   .banner nav { gap: 10px; overflow: visible; }
   .axis-end { font-size: 0.66rem; letter-spacing: 0.1em; }
@@ -400,6 +400,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .share-btn:hover { background: rgba(160, 175, 220, 0.16); }
 .share-btn:focus-visible, .banner-share:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .banner-share {
+  display: inline-flex; align-items: center; gap: 6px;
   font: inherit; color: var(--ink); background: transparent; cursor: pointer; white-space: nowrap;
   padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(160, 175, 220, 0.3);
   transition: border-color 200ms ease, box-shadow 200ms ease;
