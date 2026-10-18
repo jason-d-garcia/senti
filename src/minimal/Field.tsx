@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { KeyboardEvent, PointerEvent } from "react";
+import type { KeyboardEvent, RefObject } from "react";
 import { EMOTIONS, MIXED_RADIUS, emotionAt } from "../mood";
 
 const clamp = (v: number) => Math.max(-1, Math.min(1, v));
@@ -11,6 +11,10 @@ const REWIND_MS = 700;
 /** Pixels: how close the pointer must be to a dropped light to pick it up again. */
 const GRAB_RADIUS = 20;
 const IDLE_SPARKLE_MS = 240;
+/** Section lines are drawn this far out (in board half-widths) so they reach the screen edge. */
+const RAY = 12;
+/** Pixels: the light stops this far short of the screen edge. */
+const EDGE = 10;
 /** Distance of the emotion names from the centre; a little closer in on narrow screens so they don't crowd the axis titles. */
 const NARROW = typeof window !== "undefined" && window.matchMedia("(max-width: 560px)").matches;
 const R_LABEL = NARROW ? 0.6 : 0.66;
@@ -38,13 +42,15 @@ interface Props {
   placing?: { at: Pt; artwork?: string; onMove: (p: Pt) => void };
   /** Zoomed in on part of the map, showing songs there. */
   zoom?: { center: Pt; scale: number; songs: FieldSong[]; onSong: (id: string) => void; onPan: (center: Pt) => void; onPanLive?: (center: Pt | null) => void } | null;
+  /** The area that tracks the pointer (the whole stage), so the light can travel past the board to the screen edge. */
+  surface?: RefObject<HTMLElement>;
 }
 
 const pct = (p: Pt) => ({ x: ((p.valence + 1) / 2) * 100, y: ((1 - p.arousal) / 2) * 100 });
 const pos = (p: Pt) => { const { x, y } = pct(p); return { left: `${x}%`, top: `${y}%` }; };
 
 /** The mood map: faint section lines, a light that follows the pointer shedding sparkles, and a zoomed song view. */
-export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, zoom }: Props) {
+export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, zoom, surface }: Props) {
   const [ghost, setGhost] = useState<Pt | null>(null);
   const [overLight, setOverLight] = useState(false);
   // Panning the zoomed map: where the drag started, and the centre it would move to.
@@ -71,21 +77,25 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   const toPt = useCallback((clientX: number, clientY: number): Pt | null => {
     const box = ref.current?.getBoundingClientRect();
     if (!box) return null;
-    return { valence: clamp(((clientX - box.left) / box.width) * 2 - 1),
-      arousal: clamp(1 - ((clientY - box.top) / box.height) * 2) };
-  }, []);
+    const area = (surface?.current ?? ref.current)!.getBoundingClientRect();
+    const x = Math.max(area.left + EDGE, Math.min(area.right - EDGE, clientX));
+    const y = Math.max(area.top + EDGE, Math.min(area.bottom - EDGE, clientY));
+    return { valence: ((x - box.left) / box.width) * 2 - 1, arousal: 1 - ((y - box.top) / box.height) * 2 };
+  }, [surface]);
 
   // Sparkles: small twinkling stars drifting off the light.
   const animate = useCallback(() => {
     const c = canvas.current, box = ref.current?.getBoundingClientRect();
     if (!c || !box) { running.current = false; return; }
+    // The canvas spills past the board so sparkles follow the light to the screen edge.
+    const cb = c.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    if (c.width !== Math.round(box.width * dpr) || c.height !== Math.round(box.height * dpr)) {
-      c.width = Math.round(box.width * dpr); c.height = Math.round(box.height * dpr);
+    if (c.width !== Math.round(cb.width * dpr) || c.height !== Math.round(cb.height * dpr)) {
+      c.width = Math.round(cb.width * dpr); c.height = Math.round(cb.height * dpr);
     }
     const ctx = c.getContext("2d")!;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, box.width, box.height);
+    ctx.setTransform(dpr, 0, 0, dpr, box.left - cb.left, box.top - cb.top);
+    ctx.clearRect(cb.left - box.left, cb.top - box.top, cb.width, cb.height);
     const now = performance.now();
     particles.current = particles.current.filter((p) => now - p.born < p.life);
     for (const p of particles.current) {
@@ -144,14 +154,14 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     }
   };
 
-  const nearLight = (e: PointerEvent<HTMLDivElement>) => {
+  const nearLight = (e: PointerEvent) => {
     const box = ref.current?.getBoundingClientRect();
     if (!box) return false;
     const { x, y } = pct(dot);
     return Math.hypot(e.clientX - (box.left + (x / 100) * box.width), e.clientY - (box.top + (y / 100) * box.height)) < GRAB_RADIUS;
   };
 
-  const panMove = (e: PointerEvent<HTMLDivElement>) => {
+  const panMove = (e: PointerEvent) => {
     const box = ref.current?.getBoundingClientRect();
     if (!pan.current || !box || !zoom) return;
     const k = zoom.scale;
@@ -162,7 +172,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     setPanCenter(next);
     zoom.onPanLive?.(next);
   };
-  const follow = (e: PointerEvent<HTMLDivElement>) => {
+  const follow = (e: PointerEvent) => {
     if (zoomed) { panMove(e); return; }
     // Mouse and pen: the light follows until a click drops it. Touch: it moves while the finger is down.
     const p = toPt(e.clientX, e.clientY);
@@ -179,8 +189,8 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     if (history.current.length > 60) history.current.shift();
     moveNow(p);
   };
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
+  const onPointerDown = (e: PointerEvent) => {
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
     if (zoom) { pan.current = { x: e.clientX, y: e.clientY, from: zoom.center }; return; }
     setGhost(null);
     // Clicking a dropped light picks it up so it follows the pointer again.
@@ -200,7 +210,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     zoom?.onPanLive?.(null);
   };
   const onPointerUp = () => { pressed.current = false; endPan(); };
-  const onPointerLeave = (e: PointerEvent<HTMLDivElement>) => {
+  const onPointerLeave = (e: PointerEvent) => {
     pressed.current = false;
     if (zoomed) { endPan(); return; }
     setGhost(null); setOverLight(false);
@@ -212,6 +222,39 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     if (before) moveNow(before.p);
     history.current = [];
   };
+
+  // Pointer events come from the whole stage. Over the panel, the song card or any control, the
+  // pointer is treated as having left the map (so reaching for a button doesn't move the light).
+  const overUi = useRef(false);
+  const isUi = (t: EventTarget | null) =>
+    t instanceof Element && !!t.closest(".dock, .card, .discover-bar, .song-dot, button, a, input, summary, label");
+  const handlers = useRef({ onPointerDown, follow, onPointerUp, onPointerLeave });
+  handlers.current = { onPointerDown, follow, onPointerUp, onPointerLeave };
+  useEffect(() => {
+    const el = surface?.current ?? ref.current;
+    if (!el) return;
+    const down = (e: PointerEvent) => { if (!isUi(e.target)) handlers.current.onPointerDown(e); };
+    const moveH = (e: PointerEvent) => {
+      const ui = isUi(e.target) && !pressed.current && !pan.current;
+      if (ui && !overUi.current) handlers.current.onPointerLeave(e);
+      overUi.current = ui;
+      if (!ui) handlers.current.follow(e);
+    };
+    const up = () => handlers.current.onPointerUp();
+    const leave = (e: PointerEvent) => { overUi.current = false; handlers.current.onPointerLeave(e); };
+    el.addEventListener("pointerdown", down);
+    el.addEventListener("pointermove", moveH);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    el.addEventListener("pointerleave", leave);
+    return () => {
+      el.removeEventListener("pointerdown", down);
+      el.removeEventListener("pointermove", moveH);
+      el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointercancel", up);
+      el.removeEventListener("pointerleave", leave);
+    };
+  }, [surface]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // Zoomed in, arrow keys pan by a quarter of the view (half the view with Shift).
@@ -238,11 +281,6 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
       aria-label={zoomed ? "Songs nearby. Drag or use arrow keys to move around, Escape to go back." : placing ? "Song position. Click or use arrow keys."
         : "Mood. Move the pointer and click to drop the light, or use arrow keys: left and right for how good it feels, up and down for energy."}
       aria-valuetext={zoomed ? undefined : active?.name ?? "Mixed"}
-      onPointerDown={onPointerDown}
-      onPointerMove={follow}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onPointerLeave={onPointerLeave}
       onKeyDown={onKeyDown}
     >
       {/* Outside the scaled layer: CSS-scaling a layer rasterises it, which turns hairlines into
@@ -252,7 +290,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
           {EMOTIONS.map((e) => (
             // Quadrant boundaries are the axes: drawn by the page outside the zoom, here only when zoomed in.
             <line key={e.name} className={e.from % 90 === 0 ? "axis-line" : undefined}
-              x1="0" y1="0" x2={1.5 * Math.cos(rad(e.from))} y2={-1.5 * Math.sin(rad(e.from))} />
+              x1="0" y1="0" x2={RAY * Math.cos(rad(e.from))} y2={-RAY * Math.sin(rad(e.from))} />
           ))}
           <ellipse cx="0" cy="0" rx={MIXED_RADIUS} ry={MIXED_RADIUS} />
         </g>

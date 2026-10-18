@@ -180,7 +180,8 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .sections line, .sections ellipse {
   fill: none; stroke: rgba(160, 175, 220, 0.13); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 3 5;
 }
-.sparkles { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+/* Larger than the board so sparkles follow the light out to the screen edge (the stage clips it). */
+.sparkles { position: absolute; left: -100vw; top: -100vh; width: calc(100% + 200vw); height: calc(100% + 200vh); pointer-events: none; }
 .light {
   position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
   scale: calc(1 / var(--k, 1));
@@ -411,3 +412,8 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   font-family: var(--font-brand); font-synthesis: none;
 }
 
+
+/* The light follows the pointer anywhere on the stage, not just over the board. */
+.stage:not(.is-discovering) { cursor: none; }
+.stage .dock, .stage .card, .stage .discover-bar { cursor: auto; }
+.stage { touch-action: none; }

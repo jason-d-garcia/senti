@@ -356,6 +356,7 @@ export default function Minimal() {
             pinned={placing ? placePinned : pinned}
             onPin={placing ? setPlacePinned : setPinned}
             placing={placing ? { at: placeAt, artwork: pick!.preview.artworkUrl, onMove: setPlaceAt } : undefined}
+            surface={stage}
             zoom={discover && view ? { center: discover.center, scale: view.scale, songs: fieldSongs, onSong: playNearby, onPan: panTo, onPanLive: setLivePan } : null}
           />
 
