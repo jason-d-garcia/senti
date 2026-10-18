@@ -124,3 +124,5 @@ the portfolio site.
 Each song links to `open.spotify.com/search/<title artist>`, which works without an API key
 or user login. Exact track IDs and in-page playback are a later step and need the Spotify
 Web API.
+
+Future ideas are listed in [ROADMAP.md](ROADMAP.md).
