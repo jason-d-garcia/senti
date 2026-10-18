@@ -23,14 +23,6 @@ const NEAR_AXIS = [67.5, 90, 247.5, 270];
 const labelRadius = (from: number) => (NARROW && NEAR_AXIS.includes(from) ? 0.76 : R_LABEL);
 /** The pairs either side of the vertical axis are set flush away from it (Tense|Alert), so they never cross it. */
 const hug = (from: number) => (!NEAR_AXIS.includes(from) ? "" : from === 90 || from === 247.5 ? " hug-l" : " hug-r");
-/** Where a name sits: on its section's middle ray, so it never crosses a section line. On wide screens the names
- *  spread sideways on an ellipse reaching about halfway to the screen edge (`wide` board-halves across); the ones by
- *  the vertical axis, where sections are narrowest, go a little higher to keep clear of their neighbours. */
-const labelAt = (from: number, mid: number, wide: number): Pt => {
-  let r = labelRadius(from);
-  if (wide > r) r = 1 / Math.hypot(Math.cos(mid) / wide, Math.sin(mid) / (NEAR_AXIS.includes(from) ? 0.8 : 0.76));
-  return { valence: r * Math.cos(mid), arousal: r * Math.sin(mid) };
-};
 
 export interface Pt { valence: number; arousal: number }
 
@@ -67,8 +59,6 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   // Panning the zoomed map: where the drag started, and the centre it would move to.
   const pan = useRef<{ x: number; y: number; from: Pt } | null>(null);
   const [panCenter, setPanCenter] = useState<Pt | null>(null);
-  // Half the stage's width, in board halves: names spread out to about halfway to the screen edge.
-  const [wide, setWide] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const light = useRef<HTMLSpanElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -242,16 +232,6 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   const overUi = useRef(false);
   const isUi = (t: EventTarget | null) =>
     t instanceof Element && !!t.closest(".dock, .card, .discover-bar, .song-dot, button, a, input, summary, label");
-  useEffect(() => {
-    const board = ref.current, stage = surface?.current;
-    if (!board || !stage) return;
-    const measure = () => { const bw = board.offsetWidth; if (bw) setWide((0.5 * stage.offsetWidth) / bw); };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(board); ro.observe(stage);
-    return () => ro.disconnect();
-  }, [surface]);
-
   const handlers = useRef({ onPointerDown, follow, onPointerUp, onPointerLeave });
   handlers.current = { onPointerDown, follow, onPointerUp, onPointerLeave };
   useEffect(() => {
@@ -340,7 +320,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
           return (
             <span key={e.name} aria-hidden="true"
               className={`emotion-label${active === e ? " is-active" : ""}${hug(e.from)}`}
-              style={{ ...pos(labelAt(e.from, mid, wide)), color: labelColor(e.name) }}>
+              style={{ ...pos({ valence: labelRadius(e.from) * Math.cos(mid), arousal: labelRadius(e.from) * Math.sin(mid) }), color: labelColor(e.name) }}>
               {e.name}
             </span>
           );
