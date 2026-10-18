@@ -210,14 +210,15 @@ export default function Minimal() {
   const flash = (msg: string) => { setShareNote(msg); setTimeout(() => setShareNote(null), 2200); };
   const shareSong = async () => {
     if (!pick) return;
-    const e = sectionOf(pick.song).toLowerCase();
-    const r = await share({ title: "Moodify", url: songLink(pick.song),
-      text: `I’m feeling ${e}: ${pick.song.title} by ${pick.song.artist}, found on Moodify` });
+    const e = emotionAt(pick.song.valence, pick.song.arousal);
+    const feeling = `I’m feeling ${(e?.name ?? "Mixed").toLowerCase()} ${e?.emoji ?? MIXED_EMOJI}`;
+    const r = await share({ title: "Senti", url: songLink(pick.song),
+      text: `${feeling}\n🎵 ${pick.song.title} by ${pick.song.artist}\n\nFind a song for how you feel on Senti:` });
     if (r === "copied") flash("Link copied");
   };
   const shareSite = async () => {
-    const r = await share({ title: "Moodify", url: window.location.origin,
-      text: "Moodify: pick a feeling, get a song that fits it." });
+    const r = await share({ title: "Senti", url: window.location.origin,
+      text: "Senti: pick a feeling, get a song that fits it." });
     if (r === "copied") flash("Link copied");
   };
 
@@ -322,8 +323,8 @@ export default function Minimal() {
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
-        <span className="brand" translate="no"><span className="brand-dot" aria-hidden="true" />Moodify</span>
-        <nav aria-label="About Moodify">
+        <span className="brand" translate="no"><span className="brand-dot" aria-hidden="true" />Senti</span>
+        <nav aria-label="About Senti">
           <div className="banner-links">
             {LINKS.map((l) => (
               <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
@@ -337,7 +338,7 @@ export default function Minimal() {
               ))}
             </div>
           </details>
-          <button type="button" className="banner-share" onClick={shareSite}>Share<span className="wide-only"> Moodify</span></button>
+          <button type="button" className="banner-share" onClick={shareSite}>Share<span className="wide-only"> Senti</span></button>
         </nav>
       </header>
 

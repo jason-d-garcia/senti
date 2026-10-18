@@ -45,7 +45,7 @@ def font(path, size, index=0):
 heavy = font("/System/Library/Fonts/Avenir Next.ttc", 92, 8)
 mid = font("/System/Library/Fonts/Avenir Next.ttc", 40, 5)
 small = font("/System/Library/Fonts/Avenir Next.ttc", 26, 5)
-d.text((80, 190), "Moodify", font=heavy, fill=(240, 243, 250))
+d.text((80, 190), "Senti", font=heavy, fill=(240, 243, 250))
 d.text((82, 312), "I'm feeling", font=mid, fill=(130, 140, 170))
 w = d.textlength("I'm feeling ", font=mid)
 d.text((82 + w, 312), "elated", font=mid, fill=(246, 185, 59))

@@ -145,7 +145,7 @@ export default function App() {
         <header className="masthead">
           <div className="wordmark">
             <span className="wordmark-glyph" aria-hidden="true" />
-            Moodify
+            Senti
           </div>
           <p className="tagline">Drag the light to a feeling. Get songs that sound like it.</p>
           <p className="explainer">

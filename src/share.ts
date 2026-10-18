@@ -1,4 +1,4 @@
-/** Share links: ?s=<song key> opens Moodify on that song. */
+/** Share links: ?s=<song key> opens Senti on that song. */
 import { songKey } from "./feedback";
 
 export const SHARE_PARAM = "s";
@@ -25,7 +25,7 @@ export async function share(data: { title: string; text: string; url: string }):
     }
   }
   try {
-    await navigator.clipboard.writeText(`${data.text} ${data.url}`);
+    await navigator.clipboard.writeText(`${data.text}\n${data.url}`);
     return "copied";
   } catch {
     return "failed";
