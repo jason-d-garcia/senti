@@ -18,7 +18,7 @@
   --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --font-body: "Figtree", "Helvetica Neue", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  /* senti's own lettering (scripts/make_font.py); anything it doesn't draw falls back to Figtree. */
+  /* senti's own typeface (scripts/make_senti_font.py); anything it doesn't draw falls back to Figtree. */
   --font-brand: "senti", "Figtree", system-ui, sans-serif;
   color-scheme: dark;
 }

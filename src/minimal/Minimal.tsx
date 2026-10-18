@@ -319,7 +319,7 @@ export default function Minimal() {
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
-        <span className="brand" translate="no"><img className="brand-mark" src="/senti-mark.svg" alt="" width="36" height="34" />senti</span>
+        <span className="brand" translate="no"><img className="brand-mark" src="/senti-mark.svg" alt="" width="36" height="26" />senti</span>
         <nav aria-label="About senti">
           <a href="about.html">About</a>
           <a href={REPO} target="_blank" rel="noreferrer" className="banner-icon" aria-label="Code on GitHub" title="Code on GitHub"><GitHubLogo /></a>
@@ -389,7 +389,7 @@ export default function Minimal() {
                     {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
                   </button>
                   <p className="hint">{notFound ? "Couldn’t find a playable song here. Try another spot."
-                    : TOUCH ? "Tap anywhere to move the light." : "Click anywhere to move the light, or click it to pick it up."}</p>
+                    : TOUCH ? "Tap anywhere to move the light." : "Click anywhere to move the light."}</p>
                 </div>
               </>
             )}

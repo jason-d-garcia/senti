@@ -12,7 +12,10 @@ const REWIND_MS = 700;
 const GRAB_RADIUS = 20;
 const IDLE_SPARKLE_MS = 240;
 /** Distance of the emotion names from the centre; a little closer in on narrow screens so they don't crowd the axis titles. */
-const R_LABEL = typeof window !== "undefined" && window.matchMedia("(max-width: 560px)").matches ? 0.6 : 0.66;
+const NARROW = typeof window !== "undefined" && window.matchMedia("(max-width: 560px)").matches;
+const R_LABEL = NARROW ? 0.6 : 0.66;
+/** The four names either side of the vertical axis sit further out on narrow screens so pairs don't touch. */
+const labelRadius = (from: number) => (NARROW && [67.5, 90, 247.5, 270].includes(from) ? 0.72 : R_LABEL);
 
 export interface Pt { valence: number; arousal: number }
 
@@ -267,7 +270,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
           return (
             <span key={e.name} aria-hidden="true"
               className={`emotion-label${active === e ? " is-active" : ""}`}
-              style={{ ...pos({ valence: R_LABEL * Math.cos(mid), arousal: R_LABEL * Math.sin(mid) }), color: labelColor(e.name) }}>
+              style={{ ...pos({ valence: labelRadius(e.from) * Math.cos(mid), arousal: labelRadius(e.from) * Math.sin(mid) }), color: labelColor(e.name) }}>
               {e.name}
             </span>
           );

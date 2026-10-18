@@ -1,6 +1,12 @@
 html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b; color-scheme: dark; overscroll-behavior: none; }
 /* Minimal view: a full-screen mood field, one line of text, one song at a time. */
 .minimal {
+  /* Interface text is set in senti; song titles, artists and typed text stay in a full text face. */
+  --font-text: "Figtree", "Helvetica Neue", system-ui, sans-serif;
+  --font-body: var(--font-brand);
+  --font-display: var(--font-brand);
+  --font-mono: var(--font-brand);
+  font-synthesis: none;
   --ink: #e8ecf8;
   --dim: #838ca8;
   --muted: #aab2ca;
@@ -25,7 +31,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   font-size: 0.82rem;
 }
 .brand { display: inline-flex; align-items: center; gap: 0.32em; font: 400 1.5rem/1 var(--font-brand); }
-.brand-mark { height: 0.62em; width: auto; transform: translateY(0.02em); }
+.brand-mark { height: 0.78em; width: auto; }
 .banner nav { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; }
 .banner a { color: var(--muted); text-decoration: none; white-space: nowrap; transition: color 200ms ease; }
 .banner a:hover, .banner a:focus-visible { color: var(--ink); }
@@ -62,7 +68,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .axis-y { top: 0; bottom: 0; left: var(--cx, 50%); width: 1px; }
 .axis-end {
   position: absolute; user-select: none; white-space: nowrap;
-  font: 700 0.95rem/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
+  font: 700 0.95rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
   color: #fff;
   text-shadow: 0 0 8px rgba(255, 255, 255, 0.55), 0 0 22px rgba(255, 255, 255, 0.25);
 }
@@ -149,7 +155,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 /* Emotion names on the map: faint, brighter and larger in the light's section, clearer while placing a song. */
 .emotion-label {
   position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--k, 1)));
-  font: 600 0.72rem/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap;
+  font: 600 0.72rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
   opacity: 0.4; pointer-events: none; user-select: none;
   transition: opacity 300ms ease, transform 300ms ease, text-shadow 300ms ease;
 }
@@ -299,8 +305,8 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .ring { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); transform: rotate(-90deg); pointer-events: none; }
 .ring circle { fill: none; stroke: #fff; stroke-width: 1; stroke-dasharray: 1; opacity: 0.8; transition: stroke-dashoffset 250ms linear; }
 .meta { min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-right: 24px; }
-.title { margin: 0; font: 800 clamp(1.4rem, 3vw, 2rem)/1.15 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
-.artist { font-size: 1rem; color: var(--dim); }
+.title { margin: 0; font: 800 clamp(1.4rem, 3vw, 2rem)/1.15 var(--font-text); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.artist { font-size: 1rem; color: var(--dim); font-family: var(--font-text); }
 .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .links a {
   display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px 9px 10px; border-radius: 999px;
@@ -343,10 +349,10 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 
 @media (max-width: 560px) {
   .banner nav { gap: 14px; overflow: visible; }
-  .axis-end { font-size: 0.66rem; letter-spacing: 0.1em; }
+  .axis-end { font-size: 0.6rem; letter-spacing: 0.04em; }
   /* Narrow board: smaller names, and the side axis titles set a little lower so they fall
      between the names just below the axis (Sad, Contented) and the next ring out. */
-  .emotion-label { font-size: 0.56rem; letter-spacing: 0.08em; }
+  .emotion-label { font-size: 0.5rem; letter-spacing: 0; }
   .end-right, .end-left { top: calc(var(--cy, 50%) + 36px); }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -370,7 +376,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .vibe-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
 .vibe-input {
   flex: 1; max-width: 240px; min-width: 0; padding: 9px 14px; border-radius: 999px;
-  font: 500 0.85rem/1 var(--font-body); color: var(--ink);
+  font: 500 0.85rem/1 var(--font-text); color: var(--ink);
   background: rgba(160, 175, 220, 0.06); border: 1px solid rgba(160, 175, 220, 0.2);
 }
 .vibe-input::placeholder { color: var(--dim); }
@@ -404,7 +410,4 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .brand, .feeling, .find, .discover-link, .ghost, .solid, .ask-q, .hint, .place-bar p {
   font-family: var(--font-brand); font-synthesis: none;
 }
-/* senti's x-height is lower than the text fonts', so its lines run a size up. */
-.feeling { font-size: clamp(1.6rem, 3.9vw, 2.45rem); }
-.find { font-size: 1.22rem; }
-.ask-q { font-size: 1.4rem; }
+
