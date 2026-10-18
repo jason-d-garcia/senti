@@ -97,7 +97,8 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
       c.width = Math.round(cb.width * dpr); c.height = Math.round(cb.height * dpr);
     }
     const ctx = c.getContext("2d")!;
-    ctx.setTransform(dpr, 0, 0, dpr, box.left - cb.left, box.top - cb.top);
+    // The translation is in device pixels, so it scales with the pixel ratio too.
+    ctx.setTransform(dpr, 0, 0, dpr, (box.left - cb.left) * dpr, (box.top - cb.top) * dpr);
     ctx.clearRect(cb.left - box.left, cb.top - box.top, cb.width, cb.height);
     const now = performance.now();
     particles.current = particles.current.filter((p) => now - p.born < p.life);
