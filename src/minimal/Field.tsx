@@ -20,7 +20,7 @@ const NARROW = typeof window !== "undefined" && window.matchMedia("(max-width: 5
 const R_LABEL = NARROW ? 0.68 : 0.66;
 /** The four names either side of the vertical axis sit further out, where their narrow sections are wide enough to hold them. */
 const NEAR_AXIS = [67.5, 90, 247.5, 270];
-const labelRadius = (from: number) => (NEAR_AXIS.includes(from) ? (NARROW ? 0.76 : 0.72) : R_LABEL);
+const labelRadius = (from: number) => (NEAR_AXIS.includes(from) ? (NARROW ? 0.76 : 0.8) : R_LABEL);
 /** On narrow screens those sections are too slim for the larger names, so the pairs are set flush away from the axis (Tense|Alert). */
 const hug = (from: number) => (!NARROW || !NEAR_AXIS.includes(from) ? "" : from === 90 || from === 247.5 ? " hug-l" : " hug-r");
 
