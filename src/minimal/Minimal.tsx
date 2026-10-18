@@ -78,7 +78,7 @@ const Feeling = memo(function Feeling({ idx }: { idx: number }) {
   const current = WHEEL[idx];
   return (
     <h1 className="feeling">
-      <span className="feeling-lead">I'm feeling</span>
+      <span className="feeling-lead">I’m feeling</span>
       <span className="wheel" aria-live="polite">
         <span className="sr-only">{current.name}</span>
         <span className={`wheel-track${animate ? "" : " no-anim"}`} style={{ transform: `translateY(${-pos * 1.35}em)` }} aria-hidden="true">
@@ -135,6 +135,7 @@ export default function Minimal() {
   // Page-wide glow and axes are centred on the board, wherever layout puts it.
   const stage = useRef<HTMLElement>(null);
   const board = useRef<HTMLDivElement>(null);
+  const [boardHalf, setBoardHalf] = useState(300);
   useLayoutEffect(() => {
     const place = () => {
       const s = stage.current?.getBoundingClientRect(), b = board.current?.getBoundingClientRect();
@@ -142,6 +143,7 @@ export default function Minimal() {
       stage.current.style.setProperty("--cx", `${b.left - s.left + b.width / 2}px`);
       stage.current.style.setProperty("--cy", `${b.top - s.top + b.height / 2}px`);
       stage.current.style.setProperty("--bh", `${b.height / 2}px`);
+      setBoardHalf(b.width / 2);
     };
     place();
     const ro = new ResizeObserver(place);
@@ -193,7 +195,12 @@ export default function Minimal() {
   const thumbsDown = () => { setDiscover(null); setPlaceAt(dot); setPlacePinned(false); setPick((p) => p && { ...p, step: "place" }); };
   const savePlace = () => { vote(false, placeAt); setPick((p) => p && { ...p, step: "placed" }); };
   const skipPlace = () => { vote(false); setPick((p) => p && { ...p, step: "placed" }); };
-  const close = () => { audio.current?.pause(); setPick(null); };
+  const card = useRef<HTMLDivElement>(null);
+  const findBtn = useRef<HTMLButtonElement>(null);
+  const close = () => { audio.current?.pause(); setPick(null); findBtn.current?.focus({ preventScroll: true }); };
+  // A new song card takes focus, so keyboard and screen-reader users land on it.
+  const cardSong = pick && pick.step !== "place" ? pick.song.id : null;
+  useEffect(() => { if (cardSong) card.current?.focus({ preventScroll: true }); }, [cardSong]);
 
   // Sharing: a song link opens the site on that song; the banner shares the site itself.
   const [shareNote, setShareNote] = useState<string | null>(null);
@@ -202,7 +209,7 @@ export default function Minimal() {
     if (!pick) return;
     const e = sectionOf(pick.song).toLowerCase();
     const r = await share({ title: "Moodify", url: songLink(pick.song),
-      text: `I'm feeling ${e}: ${pick.song.title} by ${pick.song.artist}, found on Moodify` });
+      text: `I’m feeling ${e}: ${pick.song.title} by ${pick.song.artist}, found on Moodify` });
     if (r === "copied") flash("Link copied");
   };
   const shareSite = async () => {
@@ -238,8 +245,7 @@ export default function Minimal() {
     const others = songs.filter((s) => !ids.has(s.id) && Math.abs(s.valence - center.valence) < 1.1 / scale
       && Math.abs(s.arousal - center.arousal) < 1.1 / scale).sort((a, b) => d(a) - d(b)).slice(0, OTHERS);
     // Nudge covers apart so they don't stack (display positions only; true positions are kept for votes).
-    const half = (board.current?.getBoundingClientRect().width ?? 600) / 2;
-    const gap = (COVER_PX + 6) / (half * scale);
+    const gap = (COVER_PX + 6) / (boardHalf * scale);
     const at = featured.map((s) => ({ v: s.valence, a: s.arousal }));
     for (let it = 0; it < 60; it++) {
       for (let i = 0; i < at.length; i++) for (let j = i + 1; j < at.length; j++) {
@@ -253,7 +259,7 @@ export default function Minimal() {
       ...others.map((s) => ({ song: s, featured: false, v: s.valence, a: s.arousal })),
       ...featured.map((s, i) => ({ song: s, featured: true, v: at[i].v, a: at[i].a })),
     ] };
-  }, [discover, songs]);
+  }, [discover, songs, boardHalf]);
   const nearby = view?.items ?? [];
 
   // Fetch covers for the featured songs a few at a time (the iTunes search allows about 20 lookups a minute).
@@ -292,12 +298,14 @@ export default function Minimal() {
   const panTo = (center: Pt) => setDiscover((d) => d && { ...d, center, section: sectionOf(center), near: null });
   // The centre while a drag is in progress, so the page glow moves with the map.
   const [livePan, setLivePan] = useState<Pt | null>(null);
+  // Escape closes the song card first, then the zoomed view.
+  const escape = useRef(() => {});
+  escape.current = () => { if (pick && !placing) close(); else if (discover) closeDiscover(); };
   useEffect(() => {
-    if (!discover) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeDiscover(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") escape.current(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [discover]);
+  }, []);
 
   const playNearby = async (id: string) => {
     const s = songs.find((x) => x.id === id);
@@ -311,7 +319,7 @@ export default function Minimal() {
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
-        <span className="brand"><span className="brand-dot" aria-hidden="true" />Moodify</span>
+        <span className="brand" translate="no"><span className="brand-dot" aria-hidden="true" />Moodify</span>
         <nav aria-label="About Moodify">
           {LINKS.map((l) => (
             <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
@@ -349,7 +357,7 @@ export default function Minimal() {
 
           {discover && (
             <div className="discover-bar">
-              <p><span style={{ color: COLOR[EMOTIONS.find((e) => e.name === discover.section)?.mood ?? "mixed"] }}>{discover.section}</span> songs {discover.near ? <>near <b>{discover.near}</b></> : "here"} <span className="pan-hint">· drag to explore</span></p>
+              <p><span style={{ color: COLOR[EMOTIONS.find((e) => e.name === discover.section)?.mood ?? "mixed"] }}>{discover.section}</span> songs {discover.near ? <>near <b>{discover.near}</b></> : "here"} <span className="pan-hint">· drag or use arrow keys to explore</span></p>
               <button type="button" className="minimize" onClick={closeDiscover} aria-label="Back to the full map" title="Back to the full map">
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
@@ -372,11 +380,11 @@ export default function Minimal() {
                 <Feeling idx={idx} />
                 {/* Opens once the light is dropped; folds away again when it's picked up. */}
                 <div className="dock-more" aria-hidden={!pinned ? true : undefined}>
-                  <button type="button" className="find" onClick={findSong} disabled={finding || !songs.length} tabIndex={pinned ? 0 : -1}>
+                  <button type="button" className="find" ref={findBtn} onClick={findSong} disabled={finding || !songs.length} tabIndex={pinned ? 0 : -1}>
                     <span className="find-icon" aria-hidden="true">▶</span>
                     {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
                   </button>
-                  <p className="hint">{notFound ? "Couldn't find a playable song here. Try another spot."
+                  <p className="hint">{notFound ? "Couldn’t find a playable song here. Try another spot."
                     : "Click anywhere to move the light, or click it to pick it up."}</p>
                 </div>
               </>
@@ -386,18 +394,18 @@ export default function Minimal() {
         </div>
 
         {pick && !placing && (
-          <div className="card" role="dialog" aria-label={`${pick.song.title} by ${pick.song.artist}`}>
+          <div className="card" ref={card} tabIndex={-1} role="dialog" aria-labelledby="card-title">
             <button type="button" className="close" onClick={close} aria-label="Close">×</button>
             <div className="card-top">
               <button type="button" className="cover" onClick={togglePlay} aria-label={playing ? "Pause preview" : "Play 30-second preview"}>
-                {pick.preview.artworkUrl ? <img src={pick.preview.artworkUrl} alt="" /> : <span className="cover-blank">♪</span>}
+                {pick.preview.artworkUrl ? <img src={pick.preview.artworkUrl} alt="" width={220} height={220} /> : <span className="cover-blank">♪</span>}
                 <span className="cover-play" aria-hidden="true">{playing ? "❚❚" : "▶"}</span>
                 <svg className="ring" viewBox="0 0 36 36" aria-hidden="true">
                   <circle cx="18" cy="18" r="16" pathLength="1" style={{ strokeDashoffset: 1 - progress }} />
                 </svg>
               </button>
               <div className="meta">
-                <div className="title">{pick.song.title}</div>
+                <h2 className="title" id="card-title">{pick.song.title}</h2>
                 <div className="artist">{pick.song.artist}{pick.song.year ? ` · ${pick.song.year}` : ""}</div>
                 <div className="links">
                   <a href={spotifySearchUrl(pick.song)} target="_blank" rel="noreferrer" onClick={touched}><SpotifyLogo /> Spotify</a>

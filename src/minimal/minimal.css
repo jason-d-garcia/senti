@@ -10,7 +10,10 @@
   color: var(--ink);
   font-family: var(--font-body);
   overflow: hidden;
+  /* Edge-to-edge on phones (viewport-fit=cover): keep content clear of the notch and home bar. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
+.minimal button, .minimal a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
 /* Banner */
 .banner {
@@ -112,6 +115,7 @@
 }
 .song-dot img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .song-dot:hover, .song-dot:focus-visible { transform: scale(1.25); z-index: 2; opacity: 1; outline: none; }
+.song-dot:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 @keyframes dot-in { from { opacity: 0; transform: scale(0.4); } }
 .field.is-zoomed .light, .field.is-zoomed .ghost-ring { opacity: 0; transition: opacity 300ms ease; }
 
@@ -128,7 +132,6 @@
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 .minimize:hover, .minimize:focus-visible { border-color: var(--glow); box-shadow: 0 0 16px -4px var(--glow); outline: none; }
-.dock { transition: opacity 400ms ease, transform 400ms ease, padding 400ms ease, width 400ms ease; }
 /* Minimised: just "I'm feeling …" until the light is dropped. */
 .dock.is-collapsed { width: min(440px, 92vw); padding: 8px 18px; }
 .dock-more {
@@ -182,11 +185,6 @@
 .light.is-selected, .light.is-hover { width: 22px; height: 22px; margin: -11px 0 0 -11px; }
 .field.over-light { cursor: grab; }
 .light.is-dim { opacity: 0.35; }
-.light.is-pinned::after {
-  content: ""; position: absolute; inset: -7px; border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--glow) 70%, #fff); animation: ping 2.4s ease-out infinite;
-}
-@keyframes ping { 0% { transform: scale(0.8); opacity: 0.9; } 70%, 100% { transform: scale(2.2); opacity: 0; } }
 .ghost-ring {
   position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
   border: 1px solid rgba(232, 236, 248, 0.45); pointer-events: none;
@@ -207,8 +205,8 @@
   background: #06070d;
   box-shadow: 0 0 24px 18px #06070d;
   text-align: center;
+  transition: opacity 400ms ease, transform 400ms ease, padding 400ms ease, width 400ms ease;
 }
-/* "I'm feeling" sits just left of centre and the emotion just right of it, so neither moves. */
 /* "I'm feeling" is fixed just left of centre; the wheel turns just right of it. */
 .feeling {
   margin: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; align-items: center; column-gap: 0.3em;
@@ -273,14 +271,15 @@
   padding: 26px; border-radius: 28px;
   background: var(--card); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   border: 1px solid rgba(160, 175, 220, 0.12);
-  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8), 0 0 50px -30px var(--glow);
   box-shadow: 0 40px 100px -30px rgba(0, 0, 0, 0.9), 0 0 90px -40px var(--glow);
   animation: pop 380ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
 }
+/* Focus lands on the card when it opens; the card itself needs no ring. */
+.card:focus { outline: none; }
 @keyframes pop { from { opacity: 0; scale: 0.92; } to { opacity: 1; scale: 1; } }
 .close {
-  position: absolute; top: 12px; right: 14px; width: 34px; height: 34px; border-radius: 50%; font-size: 1.5rem !important;
-  border: 0; background: transparent; color: var(--dim); font-size: 1.2rem; cursor: pointer;
+  position: absolute; top: 12px; right: 14px; width: 34px; height: 34px; border-radius: 50%;
+  border: 0; background: transparent; color: var(--dim); font-size: 1.5rem; cursor: pointer;
 }
 .close:hover { color: var(--ink); }
 .card-top { display: flex; gap: 24px; align-items: center; }
@@ -299,7 +298,7 @@
 .ring { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); transform: rotate(-90deg); pointer-events: none; }
 .ring circle { fill: none; stroke: #fff; stroke-width: 1; stroke-dasharray: 1; opacity: 0.8; transition: stroke-dashoffset 250ms linear; }
 .meta { min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-right: 24px; }
-.title { font: 800 clamp(1.4rem, 3vw, 2rem)/1.15 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.title { margin: 0; font: 800 clamp(1.4rem, 3vw, 2rem)/1.15 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .artist { font-size: 1rem; color: var(--dim); }
 .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .links a {
@@ -332,20 +331,19 @@
   .board { width: 100%; }
   .dock { width: 100%; padding: 12px 0; }
   .stage.is-discovering .dock { transform: translateX(-50%) translateY(12px); }
-  .card { position: fixed; top: auto; bottom: 16px; translate: -50% 0; padding: 18px; }
+  .card { position: fixed; top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); translate: -50% 0; padding: 18px; }
   .card-top { flex-direction: column; align-items: stretch; gap: 14px; }
   .cover, .stage.is-discovering .cover { width: 100%; height: auto; aspect-ratio: 1; max-height: 42vh; max-width: 42vh; align-self: center; }
   .meta { padding-right: 0; }
 }
 @media (max-width: 560px) {
-
   .axis-end { font-size: 0.62rem; }
   .banner nav { gap: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .card, .ask, .thumb span, .light.is-pinned::after { animation: none !important; }
-  .wheel-track, .wheel-item { transition: none; }
-  .find { transition: none; }
+  .card, .ask, .thumb span, .song-dot, .discover-bar, .toast { animation: none !important; }
+  .wheel-track, .wheel-item, .find, .dock, .dock-more, .light, .song-dot,
+  .zoom-layer, .sections-g, .page-glow, .page-axes { transition: none !important; }
 }
 
 /* Vibe tags */

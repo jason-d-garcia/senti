@@ -199,7 +199,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     pressed.current = false;
     if (zoomed) { endPan(); return; }
     setGhost(null); setOverLight(false);
-    if (zoomed || e.pointerType === "touch" || pinned) return;
+    if (e.pointerType === "touch" || pinned) return;
     const exit = toPt(e.clientX, e.clientY), now = performance.now();
     if (!exit) return;
     const before = [...history.current].reverse().find((h) => now - h.t < REWIND_MS
@@ -209,11 +209,12 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (zoomed) return;
-    const step = e.shiftKey ? 0.2 : 0.05;
+    // Zoomed in, arrow keys pan by a quarter of the view (half the view with Shift).
+    const step = zoom ? (e.shiftKey ? 0.5 : 0.25) / zoom.scale : e.shiftKey ? 0.2 : 0.05;
     const d = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] } as Record<string, number[]>)[e.key];
     if (!d) return;
     e.preventDefault();
+    if (zoom) { zoom.onPan({ valence: clamp(zoom.center.valence + d[0]), arousal: clamp(zoom.center.arousal + d[1]) }); return; }
     onPin(true);
     moveNow({ valence: clamp(at.valence + d[0]), arousal: clamp(at.arousal + d[1]) });
   };
@@ -228,8 +229,8 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
       ref={ref}
       className={`field${placing ? " is-placing" : ""}${pinned ? " is-pinned" : ""}${zoomed ? " is-zoomed" : ""}${panCenter ? " is-panning" : ""}${overLight ? " over-light" : ""}`}
       role={zoomed ? "group" : "slider"}
-      tabIndex={zoomed ? -1 : 0}
-      aria-label={zoomed ? "Songs nearby. Drag to move around." : placing ? "Song position. Click or use arrow keys."
+      tabIndex={0}
+      aria-label={zoomed ? "Songs nearby. Drag or use arrow keys to move around, Escape to go back." : placing ? "Song position. Click or use arrow keys."
         : "Mood. Move the pointer and click to drop the light, or use arrow keys: left and right for how good it feels, up and down for energy."}
       aria-valuetext={zoomed ? undefined : active?.name ?? "Mixed"}
       onPointerDown={onPointerDown}
@@ -282,7 +283,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
             aria-label={`Play ${s.title}`}
             tabIndex={s.featured ? 0 : -1}
           >
-            {s.featured && (s.artwork ? <img src={s.artwork} alt="" /> : <span aria-hidden="true">♪</span>)}
+            {s.featured && (s.artwork ? <img src={s.artwork} alt="" width={46} height={46} /> : <span aria-hidden="true">♪</span>)}
           </button>
         ))}
 
@@ -295,7 +296,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
         {ghost && !overLight && <span className="ghost-ring" style={pos(ghost)} aria-hidden="true" />}
         {placing && (
           <span className="song-pin" style={pos(placing.at)} aria-hidden="true">
-            {placing.artwork ? <img src={placing.artwork} alt="" /> : <span>♪</span>}
+            {placing.artwork ? <img src={placing.artwork} alt="" width={44} height={44} /> : <span>♪</span>}
           </span>
         )}
       </div>
