@@ -2,7 +2,7 @@
 @font-face { font-family: "senti"; src: url("/fonts/senti.woff2") format("woff2"); font-display: swap; }
 
 :root {
-  --ink: #e8ecf8; --muted: #a4acc4; --line: rgba(160, 175, 220, 0.14);
+  --ink: #e8ecf8; --muted: #a4acc4;
   --happy: #f6b93b; --sad: #5b8cff;
   --font-brand: "senti", "Figtree", system-ui, sans-serif;
   color-scheme: dark;
@@ -29,11 +29,11 @@ a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-rad
 
 main { max-width: 640px; margin: 0 auto; padding: 56px 20px 80px; }
 h1, h2 { font-family: var(--font-brand); font-weight: 400; font-synthesis: none; letter-spacing: 0.01em; }
-h1 { margin: 0 0 18px; font-size: clamp(2.1rem, 6.4vw, 3rem); line-height: 1.1; text-wrap: balance; }
+h1 { margin: 0 0 18px; font-size: clamp(1.75rem, 8vw, 3rem); line-height: 1.1; text-wrap: balance; }
 h2 { margin: 0 0 12px; font-size: 1.45rem; line-height: 1.15; }
 .lede { margin: 0; font-size: 1.2rem; color: var(--muted); text-wrap: pretty; }
-section { padding: 34px 0; border-top: 1px solid var(--line); }
-section.hero { border-top: 0; padding-top: 0; }
+section { padding: 44px 0 0; }
+section.hero { padding-top: 0; }
 p { margin: 0 0 14px; text-wrap: pretty; }
 p:last-child { margin-bottom: 0; }
 b { font-weight: 700; }

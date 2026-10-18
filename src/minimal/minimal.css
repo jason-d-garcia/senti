@@ -354,11 +354,13 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   .close { top: 26px; right: 26px; background: rgba(6, 7, 13, 0.72); color: var(--ink); }
 }
 .banner-icon { display: grid; place-items: center; }
+/* Comfortable tap targets for the small banner links. */
+.banner nav > a { display: inline-grid; place-items: center; min-height: 44px; min-width: 40px; }
 
 
 @media (max-width: 560px) {
   .banner nav { gap: 14px; overflow: visible; }
-  .axis-end { font-size: 0.74rem; letter-spacing: 0.02em; }
+  .axis-end { font-size: 0.82rem; letter-spacing: 0.02em; }
   /* Phones: names as large as the width allows; the side axis titles sit lower, between the names
      just below the axis (Sad, Contented) and the next ring out. */
   .emotion-label { font-size: 0.8rem; letter-spacing: 0; }

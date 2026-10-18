@@ -347,7 +347,7 @@ export default function Minimal() {
           <span className="axis-end end-right">Feels good →</span>
           <span className="axis-end end-left">← Feels bad</span>
           <span className="axis-end end-top">↑ Energetic</span>
-          <span className="axis-end end-bottom">↓ Calm</span>
+          <span className="axis-end end-bottom">↓ Low energy</span>
         </div>
         <div className="board" ref={board}>
           <Field
