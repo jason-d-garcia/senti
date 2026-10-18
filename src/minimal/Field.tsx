@@ -18,11 +18,11 @@ const EDGE = 10;
 /** Distance of the emotion names from the centre; a little closer in on narrow screens so they don't crowd the axis titles. */
 const NARROW = typeof window !== "undefined" && window.matchMedia("(max-width: 560px)").matches;
 const R_LABEL = NARROW ? 0.68 : 0.66;
-/** The four names either side of the vertical axis sit further out on narrow screens so pairs don't touch. */
+/** The four names either side of the vertical axis sit further out, where their narrow sections are wide enough to hold them. */
 const NEAR_AXIS = [67.5, 90, 247.5, 270];
-const labelRadius = (from: number) => (NARROW && NEAR_AXIS.includes(from) ? 0.76 : R_LABEL);
-/** The pairs either side of the vertical axis are set flush away from it (Tense|Alert), so they never cross it. */
-const hug = (from: number) => (!NEAR_AXIS.includes(from) ? "" : from === 90 || from === 247.5 ? " hug-l" : " hug-r");
+const labelRadius = (from: number) => (NEAR_AXIS.includes(from) ? (NARROW ? 0.76 : 0.72) : R_LABEL);
+/** On narrow screens those sections are too slim for the larger names, so the pairs are set flush away from the axis (Tense|Alert). */
+const hug = (from: number) => (!NARROW || !NEAR_AXIS.includes(from) ? "" : from === 90 || from === 247.5 ? " hug-l" : " hug-r");
 
 export interface Pt { valence: number; arousal: number }
 

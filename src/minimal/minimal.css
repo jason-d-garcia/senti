@@ -1,12 +1,8 @@
 html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b; color-scheme: dark; overscroll-behavior: none; }
 /* Minimal view: a full-screen mood field, one line of text, one song at a time. */
 .minimal {
-  /* Interface text is set in senti; song titles, artists and typed text stay in a full text face. */
+  /* Only the senti logo is set in the senti face; everything else uses the regular text fonts. */
   --font-text: "Figtree", "Helvetica Neue", system-ui, sans-serif;
-  --font-body: var(--font-brand);
-  --font-display: var(--font-brand);
-  --font-mono: var(--font-brand);
-  font-synthesis: none;
   --ink: #e8ecf8;
   --dim: #838ca8;
   --muted: #aab2ca;
@@ -420,10 +416,8 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   animation: fade 250ms ease;
 }
 
-/* The brand lettering: headline, buttons and prompts. Song titles and body copy stay in the text fonts. */
-.brand, .feeling, .find, .discover-link, .ghost, .solid, .ask-q, .hint, .place-bar p {
-  font-family: var(--font-brand); font-synthesis: none;
-}
+/* The logo lettering. */
+.brand { font-synthesis: none; }
 
 
 /* The light follows the pointer anywhere on the stage, not just over the board. */
