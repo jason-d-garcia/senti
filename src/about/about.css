@@ -88,3 +88,7 @@ b { font-weight: 700; }
 }
 .cta:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 14px 40px -10px var(--happy); }
 @media (prefers-reduced-motion: no-preference) { .cta { transition: transform 160ms ease; } }
+
+/* Hidden until focused by keyboard. */
+.skip { position: absolute; left: 12px; top: -48px; z-index: 10; padding: 8px 14px; border-radius: 999px; background: var(--ink); color: #05060b; text-decoration: none; }
+.skip:focus { top: 10px; }

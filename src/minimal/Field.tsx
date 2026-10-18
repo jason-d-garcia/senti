@@ -280,11 +280,11 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     <div
       ref={ref}
       className={`field${placing ? " is-placing" : ""}${pinned ? " is-pinned" : ""}${zoomed ? " is-zoomed" : ""}${panCenter ? " is-panning" : ""}${overLight ? " over-light" : ""}`}
-      role={zoomed ? "group" : "slider"}
+      role={zoomed ? "group" : "application"}
+      aria-roledescription={zoomed ? undefined : "mood map"}
       tabIndex={0}
       aria-label={zoomed ? "Songs nearby. Drag or use arrow keys to move around, Escape to go back." : placing ? "Song position. Click or use arrow keys."
-        : "Mood. Move the pointer and click to drop the light, or use arrow keys: left and right for how good it feels, up and down for energy."}
-      aria-valuetext={zoomed ? undefined : active?.name ?? "Mixed"}
+        : `Mood: ${active?.name ?? "Mixed"}. Move the pointer and click to drop the light, or use arrow keys: left and right for how good it feels, up and down for energy.`}
       onKeyDown={onKeyDown}
     >
       {/* Outside the scaled layer: CSS-scaling a layer rasterises it, which turns hairlines into

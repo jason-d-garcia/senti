@@ -76,7 +76,7 @@ const Feeling = memo(function Feeling({ idx }: { idx: number }) {
   }, [pos, idx, animate]);
   const items = Array.from({ length: WHEEL.length * COPIES }, (_, i) => WHEEL[i % WHEEL.length]);
   return (
-    <h1 className="feeling" aria-live="polite">
+    <h1 className="feeling">
       <span className="feeling-lead">I’m feeling</span>
       <span className="wheel">
         <span className={`wheel-track${animate ? "" : " no-anim"}`} style={{ transform: `translateY(${-pos * 1.35}em)` }}>
@@ -155,6 +155,9 @@ export default function Minimal() {
   const [progress, setProgress] = useState(0);
 
   const findSong = async () => {
+    if (finding) return;
+    // From the card's "Another one": the card is about to go, so hand focus to the play button meanwhile.
+    if (card.current?.contains(document.activeElement) && !discover) findBtn.current?.focus({ preventScroll: true });
     setFinding(true); setNotFound(false); setPick(null);
     audio.current?.pause();
     const done = votedSongs();
@@ -196,10 +199,22 @@ export default function Minimal() {
   const skipPlace = () => { vote(false); setPick((p) => p && { ...p, step: "placed" }); };
   const card = useRef<HTMLDivElement>(null);
   const findBtn = useRef<HTMLButtonElement>(null);
+  // The panel fades out in Discover; inert keeps Tab and screen readers out of it too.
+  const dock = useRef<HTMLDivElement>(null);
+  useEffect(() => { dock.current?.toggleAttribute("inert", !!discover); }, [discover]);
   const close = () => { audio.current?.pause(); setPick(null); findBtn.current?.focus({ preventScroll: true }); };
   // A new song card takes focus, so keyboard and screen-reader users land on it.
   const cardSong = pick && pick.step !== "place" ? pick.song.id : null;
   useEffect(() => { if (cardSong) card.current?.focus({ preventScroll: true }); }, [cardSong]);
+  // Tab cycles within the card while it's open; Escape or × closes it.
+  const trapTab = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Tab" || !card.current) return;
+    const items = [...card.current.querySelectorAll<HTMLElement>("button:not(:disabled), a[href], input:not(:disabled)")];
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1], at = document.activeElement;
+    if (e.shiftKey && (at === first || at === card.current)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && at === last) { e.preventDefault(); first.focus(); }
+  };
 
   // Sharing: a song link opens the site on that song; the banner shares the site itself.
   const [shareNote, setShareNote] = useState<string | null>(null);
@@ -304,7 +319,10 @@ export default function Minimal() {
   const escape = useRef(() => {});
   escape.current = () => { if (pick && !placing) close(); else if (discover) closeDiscover(); };
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") escape.current(); };
+    const onKey = (e: KeyboardEvent) => {
+      // Escape while typing a tag clears the field, not the whole card.
+      if (e.key === "Escape" && !(e.target instanceof HTMLInputElement)) escape.current();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -373,10 +391,10 @@ export default function Minimal() {
             </div>
           )}
 
-          <div className={`dock${!pinned && !placing ? " is-collapsed" : ""}`} aria-hidden={discover ? true : undefined}>
+          <div className={`dock${!pinned && !placing ? " is-collapsed" : ""}`} ref={dock} aria-hidden={discover ? true : undefined}>
             {placing ? (
               <div className="place-bar">
-                <p>Click where <b>{pick!.song.title}</b> belongs: <span style={{ color: COLOR[emotionAt(placeAt.valence, placeAt.arousal)?.mood ?? "mixed"] }}>{sectionOf(placeAt)}</span></p>
+                <p>{TOUCH ? "Tap" : "Click"} where <b>{pick!.song.title}</b> belongs: <span style={{ color: COLOR[emotionAt(placeAt.valence, placeAt.arousal)?.mood ?? "mixed"] }}>{sectionOf(placeAt)}</span></p>
                 <div className="row">
                   <button type="button" className="ghost" onClick={skipPlace}>Skip</button>
                   <button type="button" className="solid" onClick={savePlace}>Save</button>
@@ -387,7 +405,7 @@ export default function Minimal() {
                 <Feeling idx={idx} />
                 {/* Opens once the light is dropped; folds away again when it's picked up. */}
                 <div className="dock-more" aria-hidden={!pinned ? true : undefined}>
-                  <button type="button" className="find" ref={findBtn} onClick={findSong} disabled={finding || !songs.length} tabIndex={pinned ? 0 : -1}>
+                  <button type="button" className="find" ref={findBtn} onClick={findSong} disabled={!songs.length} aria-disabled={finding || undefined} tabIndex={pinned ? 0 : -1}>
                     <span className="find-icon" aria-hidden="true">▶</span>
                     {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
                   </button>
@@ -401,7 +419,7 @@ export default function Minimal() {
         </div>
 
         {pick && !placing && (
-          <div className="card" ref={card} tabIndex={-1} role="dialog" aria-labelledby="card-title">
+          <div className="card" ref={card} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="card-title" onKeyDown={trapTab}>
             <button type="button" className="close" onClick={close} aria-label="Close">×</button>
             <div className="card-top">
               <button type="button" className="cover" onClick={togglePlay} aria-label={playing ? "Pause preview" : "Play 30-second preview"}>
@@ -453,7 +471,12 @@ export default function Minimal() {
         )}
       </main>
 
-      {shareNote && <div className="toast" role="status">{shareNote}</div>}
+      {shareNote && <div className="toast" aria-hidden="true">{shareNote}</div>}
+      {/* Always mounted, so screen readers announce changes to it. */}
+      <p className="sr-only" role="status">
+        {shareNote ?? (finding ? "Finding a song…" : notFound ? "Couldn’t find a playable song here. Try another spot."
+          : pinned && !pick ? `I’m feeling ${section.toLowerCase()}` : "")}
+      </p>
 
       <audio
         ref={audio}
