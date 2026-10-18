@@ -24,9 +24,9 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   flex: none; height: 44px; padding: 0 18px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   border-bottom: 1px solid rgba(160, 175, 220, 0.08);
-  font-size: 0.82rem;
+  font-size: 0.92rem;
 }
-.brand { display: inline-flex; align-items: center; gap: 0.32em; font: 400 1.5rem/1 var(--font-brand); }
+.brand { display: inline-flex; align-items: center; gap: 0.32em; font: 400 1.65rem/1 var(--font-brand); }
 .brand-mark { height: 0.78em; width: auto; }
 .banner nav { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; }
 .banner a { color: var(--muted); text-decoration: none; white-space: nowrap; transition: color 200ms ease; }
@@ -34,7 +34,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 
 /* Stage: a square board centred in the space below the banner */
 /* Room is kept under the board for the emotion panel, so it never covers the map. */
-.stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px 12px 224px; overflow: hidden; }
+.stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px 12px 172px; overflow: hidden; }
 
 /* Page-wide glow in the quadrant colours (CSS conic angles run clockwise from the top). It radiates from the
    centre of the map all the way to the screen edges: a soft wash near the map, then a grain of colour that thins
@@ -88,7 +88,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .axis-y { top: 0; bottom: 0; left: var(--cx, 50%); width: 1px; }
 .axis-end {
   position: absolute; user-select: none; white-space: nowrap;
-  font: 700 0.95rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+  font: 700 1.05rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
   color: #fff;
   text-shadow: 0 0 8px rgba(255, 255, 255, 0.55), 0 0 22px rgba(255, 255, 255, 0.25);
 }
@@ -99,7 +99,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .board {
   position: relative;
   flex: none;
-  width: min(100%, calc(100dvh - 44px - 232px));
+  width: min(100%, calc(100dvh - 44px - 182px));
   aspect-ratio: 1;
 }
 
@@ -176,7 +176,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .emotion-label {
   --grow: 1.8;
   position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--k, 1)));
-  font: 600 0.6rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+  font: 600 0.7rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
   opacity: 0.4; pointer-events: none; user-select: none;
   transition: opacity 300ms ease, transform 300ms ease, text-shadow 300ms ease;
 }
@@ -245,7 +245,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 /* "I'm feeling" is fixed just left of centre; the wheel turns just right of it. */
 .feeling {
   margin: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; align-items: center; column-gap: 0.3em;
-  font: 600 clamp(1.3rem, 3.2vw, 2rem)/1 var(--font-display); letter-spacing: -0.01em;
+  font: 600 clamp(1.3rem, 3.2vw, 2.3rem)/1 var(--font-display); letter-spacing: -0.01em;
   padding: 0.35em 0 0.55em;
 }
 .feeling-lead { color: var(--dim); font-weight: 600; text-align: right; white-space: nowrap; }
