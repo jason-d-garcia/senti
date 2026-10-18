@@ -75,23 +75,23 @@ const Feeling = memo(function Feeling({ idx }: { idx: number }) {
     if (!animate) { const r = requestAnimationFrame(() => setAnimate(true)); return () => cancelAnimationFrame(r); }
   }, [pos, idx, animate]);
   const items = Array.from({ length: WHEEL.length * COPIES }, (_, i) => WHEEL[i % WHEEL.length]);
-  const current = WHEEL[idx];
   return (
-    <h1 className="feeling">
+    <h1 className="feeling" aria-live="polite">
       <span className="feeling-lead">I’m feeling</span>
-      <span className="wheel" aria-live="polite">
-        <span className="sr-only">{current.name}</span>
-        <span className={`wheel-track${animate ? "" : " no-anim"}`} style={{ transform: `translateY(${-pos * 1.35}em)` }} aria-hidden="true">
+      <span className="wheel">
+        <span className={`wheel-track${animate ? "" : " no-anim"}`} style={{ transform: `translateY(${-pos * 1.35}em)` }}>
           {items.map((w, i) => {
             const d = i - pos;
-            if (Math.abs(d) > 3) return <span key={i} className="wheel-item" />;
+            // Only the current entry is real text; neighbours exist only while the wheel turns, so the
+            // heading reads "I'm feeling elated" to screen readers and search engines.
+            if (d !== 0 && (!turning || Math.abs(d) > 2)) return <span key={i} className="wheel-item" aria-hidden="true" />;
             return (
-              <span key={i} className="wheel-item" style={{
+              <span key={i} className="wheel-item" aria-hidden={d !== 0 ? true : undefined} style={{
                 color: w.color,
                 opacity: d === 0 ? 1 : turning ? Math.max(0, 0.32 - (Math.abs(d) - 1) * 0.2) : 0,
                 transform: `perspective(300px) rotateX(${-d * 28}deg) scale(${1 - Math.abs(d) * 0.08})`,
               }}>
-                <span className="wheel-emoji">{w.emoji}</span>{w.name.toLowerCase()}
+                <span className="wheel-emoji" aria-hidden="true">{w.emoji}</span>{w.name.toLowerCase()}
               </span>
             );
           })}
@@ -102,6 +102,9 @@ const Feeling = memo(function Feeling({ idx }: { idx: number }) {
 });
 
 const labelColor = (name: string) => COLOR[EMOTIONS.find((e) => e.name === name)?.mood ?? "mixed"];
+
+/** Phones and tablets: say "tap", not "click". */
+const TOUCH = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 
 const LINKS = [
   { label: "How it works", href: "?classic" },
@@ -321,10 +324,20 @@ export default function Minimal() {
       <header className="banner">
         <span className="brand" translate="no"><span className="brand-dot" aria-hidden="true" />Moodify</span>
         <nav aria-label="About Moodify">
-          {LINKS.map((l) => (
-            <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
-          ))}
-          <button type="button" className="banner-share" onClick={shareSite}>Share Moodify</button>
+          <div className="banner-links">
+            {LINKS.map((l) => (
+              <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
+            ))}
+          </div>
+          <details className="about-menu">
+            <summary>About</summary>
+            <div className="about-list">
+              {LINKS.map((l) => (
+                <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
+              ))}
+            </div>
+          </details>
+          <button type="button" className="banner-share" onClick={shareSite}>Share<span className="wide-only"> Moodify</span></button>
         </nav>
       </header>
 
@@ -385,7 +398,7 @@ export default function Minimal() {
                     {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
                   </button>
                   <p className="hint">{notFound ? "Couldn’t find a playable song here. Try another spot."
-                    : "Click anywhere to move the light, or click it to pick it up."}</p>
+                    : TOUCH ? "Tap anywhere to move the light." : "Click anywhere to move the light, or click it to pick it up."}</p>
                 </div>
               </>
             )}

@@ -11,6 +11,8 @@ const REWIND_MS = 700;
 /** Pixels: how close the pointer must be to a dropped light to pick it up again. */
 const GRAB_RADIUS = 20;
 const IDLE_SPARKLE_MS = 240;
+/** Distance of the emotion names from the centre; a little closer in on narrow screens so they don't crowd the axis titles. */
+const R_LABEL = typeof window !== "undefined" && window.matchMedia("(max-width: 560px)").matches ? 0.6 : 0.66;
 
 export interface Pt { valence: number; arousal: number }
 
@@ -265,7 +267,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
           return (
             <span key={e.name} aria-hidden="true"
               className={`emotion-label${active === e ? " is-active" : ""}`}
-              style={{ ...pos({ valence: 0.66 * Math.cos(mid), arousal: 0.66 * Math.sin(mid) }), color: labelColor(e.name) }}>
+              style={{ ...pos({ valence: R_LABEL * Math.cos(mid), arousal: R_LABEL * Math.sin(mid) }), color: labelColor(e.name) }}>
               {e.name}
             </span>
           );

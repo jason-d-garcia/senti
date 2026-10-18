@@ -5,6 +5,8 @@ import "./styles.css";
 // The original detailed view stays available for demos: ?classic, #classic, or ?embed.
 const q = new URLSearchParams(window.location.search);
 const classic = q.has("classic") || q.has("embed") || ["#classic", "#embed"].includes(window.location.hash);
+// The minimal view is always dark underneath, whatever the system theme (no white flash on overscroll).
+if (!classic) document.documentElement.dataset.view = "minimal";
 const View = lazy(() => (classic ? import("./App") : import("./minimal/Minimal")));
 
 createRoot(document.getElementById("root")!).render(
