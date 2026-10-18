@@ -26,11 +26,15 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   border-bottom: 1px solid rgba(160, 175, 220, 0.08);
   font-size: 1.05rem;
 }
-.brand { display: inline-flex; align-items: center; gap: 0.32em; font: 400 1.95rem/1 var(--font-brand); }
-.brand-mark { height: 0.78em; width: auto; }
-/* The wordmark sits in the middle of the banner; the s: mark stays at the left. */
-.banner { position: relative; }
-.brand-word { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+/* The logo: just "s:" until hovered, then the colon slides right and "enti" fades in between. */
+.brand { display: inline-flex; align-items: baseline; font: 400 1.95rem/1 var(--font-brand); font-synthesis: none; color: var(--ink); text-decoration: none; outline: none; }
+.logo-rest { display: inline-grid; grid-template-columns: 0fr; transition: grid-template-columns 420ms cubic-bezier(0.65, 0, 0.25, 1); }
+.logo-rest > span { min-width: 0; overflow: hidden; opacity: 0; transition: opacity 300ms ease; }
+.logo-dots { width: auto; height: 0.638em; margin-left: 0.17em; align-self: baseline; transform: translateY(0.059em); }
+.brand:hover .logo-rest, .brand:focus-visible .logo-rest { grid-template-columns: 1fr; }
+.brand:hover .logo-rest > span, .brand:focus-visible .logo-rest > span { opacity: 1; transition-delay: 90ms; }
+.brand:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .logo-rest, .logo-rest > span { transition: none; } }
 .banner nav { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; }
 .banner a { color: var(--muted); text-decoration: none; white-space: nowrap; transition: color 200ms ease; }
 .banner a:hover, .banner a:focus-visible { color: var(--ink); }
@@ -364,9 +368,6 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 
 
 @media (max-width: 560px) {
-  /* No room to centre the wordmark beside the links: show just the word, at the left. */
-  .brand-mark { display: none; }
-  .brand-word { position: static; transform: none; }
   .banner { height: 44px; padding: 0 18px; font-size: 0.82rem; }
   .brand { font-size: 1.5rem; }
   .banner nav { gap: 14px; overflow: visible; }
@@ -429,8 +430,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   animation: fade 250ms ease;
 }
 
-/* The logo lettering. */
-.brand { font-synthesis: none; }
+
 
 
 /* The light follows the pointer anywhere on the stage, not just over the board. */
