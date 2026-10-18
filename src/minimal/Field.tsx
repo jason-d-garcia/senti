@@ -17,9 +17,12 @@ const RAY = 12;
 const EDGE = 10;
 /** Distance of the emotion names from the centre; a little closer in on narrow screens so they don't crowd the axis titles. */
 const NARROW = typeof window !== "undefined" && window.matchMedia("(max-width: 560px)").matches;
-const R_LABEL = NARROW ? 0.6 : 0.66;
+const R_LABEL = NARROW ? 0.68 : 0.66;
 /** The four names either side of the vertical axis sit further out on narrow screens so pairs don't touch. */
-const labelRadius = (from: number) => (NARROW && [67.5, 90, 247.5, 270].includes(from) ? 0.72 : R_LABEL);
+const NEAR_AXIS = [67.5, 90, 247.5, 270];
+const labelRadius = (from: number) => (NARROW && NEAR_AXIS.includes(from) ? 0.76 : R_LABEL);
+/** On narrow screens the pairs either side of the vertical axis are set flush away from it (Tense|Alert). */
+const hug = (from: number) => (!NARROW || !NEAR_AXIS.includes(from) ? "" : from === 90 || from === 247.5 ? " hug-l" : " hug-r");
 
 export interface Pt { valence: number; arousal: number }
 
@@ -190,7 +193,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     moveNow(p);
   };
   const onPointerDown = (e: PointerEvent) => {
-    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     if (zoom) { pan.current = { x: e.clientX, y: e.clientY, from: zoom.center }; return; }
     setGhost(null);
     // Clicking a dropped light picks it up so it follows the pointer again.
@@ -307,7 +310,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
           const mid = rad((e.from + e.to) / 2);
           return (
             <span key={e.name} aria-hidden="true"
-              className={`emotion-label${active === e ? " is-active" : ""}`}
+              className={`emotion-label${active === e ? " is-active" : ""}${hug(e.from)}`}
               style={{ ...pos({ valence: labelRadius(e.from) * Math.cos(mid), arousal: labelRadius(e.from) * Math.sin(mid) }), color: labelColor(e.name) }}>
               {e.name}
             </span>

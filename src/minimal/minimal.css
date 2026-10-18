@@ -163,6 +163,10 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   opacity: 1; transform: translate(-50%, -50%) scale(calc(1.4 / var(--k, 1)));
   text-shadow: 0 0 14px currentColor;
 }
+.emotion-label.hug-l { transform: translate(calc(-100% + 6px), -50%) scale(calc(1 / var(--k, 1))); transform-origin: right center; }
+.emotion-label.hug-r { transform: translate(-6px, -50%) scale(calc(1 / var(--k, 1))); transform-origin: left center; }
+.emotion-label.hug-l.is-active { transform: translate(calc(-100% + 6px), -50%) scale(calc(1.4 / var(--k, 1))); }
+.emotion-label.hug-r.is-active { transform: translate(-6px, -50%) scale(calc(1.4 / var(--k, 1))); }
 .field.is-placing .emotion-label { opacity: 0.72; }
 .field.is-placing .emotion-label.is-active { opacity: 1; }
 .field.is-zoomed .emotion-label { opacity: 0; }
@@ -286,7 +290,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .card:focus { outline: none; }
 @keyframes pop { from { opacity: 0; scale: 0.92; } to { opacity: 1; scale: 1; } }
 .close {
-  position: absolute; top: 12px; right: 14px; width: 34px; height: 34px; border-radius: 50%;
+  position: absolute; top: 12px; right: 14px; z-index: 2; width: 34px; height: 34px; border-radius: 50%;
   border: 0; background: transparent; color: var(--dim); font-size: 1.5rem; cursor: pointer;
 }
 .close:hover { color: var(--ink); }
@@ -343,7 +347,9 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   .card { position: fixed; top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); translate: -50% 0; padding: 18px; }
   .card-top { flex-direction: column; align-items: stretch; gap: 14px; }
   .cover, .stage.is-discovering .cover { width: 100%; height: auto; aspect-ratio: 1; max-height: 42vh; max-width: 42vh; align-self: center; }
-  .meta { padding-right: 0; }
+  .meta { padding-right: 0;   /* On phones the cover spans the card's width, so the close button sits on it: give it a backing. */
+  .close { top: 26px; right: 26px; background: rgba(6, 7, 13, 0.72); color: var(--ink); }
+}
 }
 .banner-icon { display: grid; place-items: center; }
 
@@ -353,8 +359,8 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   .axis-end { font-size: 0.6rem; letter-spacing: 0.04em; }
   /* Narrow board: smaller names, and the side axis titles set a little lower so they fall
      between the names just below the axis (Sad, Contented) and the next ring out. */
-  .emotion-label { font-size: 0.5rem; letter-spacing: 0; }
-  .end-right, .end-left { top: calc(var(--cy, 50%) + 36px); }
+  .emotion-label { font-size: 0.62rem; letter-spacing: 0; }
+  .end-right, .end-left { top: calc(var(--cy, 50%) + 44px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .card, .ask, .thumb span, .song-dot, .discover-bar, .toast { animation: none !important; }

@@ -292,6 +292,8 @@ export default function Minimal() {
     const nearest = songs.filter((s) => sectionOf(s) === section).map(d).sort((a, b) => a - b).slice(0, FEATURED);
     const scale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, 0.6 / Math.max(...nearest, 0.01)));
     setDiscover({ center, section, near: pick.song.title, scale });
+    // On phones the card would cover the zoomed map, so close it; tap a cover to bring a song back up.
+    if (window.matchMedia("(max-aspect-ratio: 4/5)").matches) { audio.current?.pause(); setPick(null); }
   };
   const closeDiscover = () => setDiscover(null);
   // Dragging the zoomed map recentres it; covers follow whichever emotion is now in the middle.
@@ -362,7 +364,7 @@ export default function Minimal() {
 
           {discover && (
             <div className="discover-bar">
-              <p><span style={{ color: COLOR[EMOTIONS.find((e) => e.name === discover.section)?.mood ?? "mixed"] }}>{discover.section}</span> songs {discover.near ? <>near <b>{discover.near}</b></> : "here"} <span className="pan-hint">· drag or use arrow keys to explore</span></p>
+              <p><span style={{ color: COLOR[EMOTIONS.find((e) => e.name === discover.section)?.mood ?? "mixed"] }}>{discover.section}</span> songs {discover.near ? <>near <b>{discover.near}</b></> : "here"} <span className="pan-hint">· {TOUCH ? "drag the screen to explore" : "drag or use arrow keys to explore"}</span></p>
               <button type="button" className="minimize" onClick={closeDiscover} aria-label="Back to the full map" title="Back to the full map">
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
