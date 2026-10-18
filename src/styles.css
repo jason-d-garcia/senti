@@ -1,3 +1,5 @@
+@font-face { font-family: "senti"; src: url("/fonts/senti.woff2") format("woff2"); font-display: swap; }
+
 /* Layout: a two-column "now playing" stage, the mood map is the hero, the track list is the sidebar. */
 :root {
   --bg: #0e1110;
@@ -16,6 +18,8 @@
   --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --font-body: "Figtree", "Helvetica Neue", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* senti's own lettering (scripts/make_font.py); anything it doesn't draw falls back to Figtree. */
+  --font-brand: "senti", "Figtree", system-ui, sans-serif;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {

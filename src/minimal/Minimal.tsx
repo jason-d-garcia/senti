@@ -323,7 +323,7 @@ export default function Minimal() {
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
-        <span className="brand" translate="no"><span className="brand-dot" aria-hidden="true" />senti</span>
+        <span className="brand" translate="no"><img className="brand-mark" src="/senti-mark.svg" alt="" width="36" height="34" />senti</span>
         <nav aria-label="About senti">
           <div className="banner-links">
             {LINKS.map((l) => (
