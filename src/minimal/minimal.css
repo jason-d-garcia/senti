@@ -338,25 +338,11 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   .cover, .stage.is-discovering .cover { width: 100%; height: auto; aspect-ratio: 1; max-height: 42vh; max-width: 42vh; align-self: center; }
   .meta { padding-right: 0; }
 }
-.about-menu { display: none; position: relative; }
-.about-menu summary {
-  list-style: none; cursor: pointer; color: var(--muted); padding: 5px 4px;
-}
-.about-menu summary::-webkit-details-marker { display: none; }
-.about-menu[open] summary { color: var(--ink); }
-.about-list {
-  position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; min-width: 170px;
-  display: flex; flex-direction: column; padding: 6px; border-radius: 14px;
-  background: #10131e; box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.8);
-}
-.about-list a { padding: 10px 12px; border-radius: 9px; }
-.about-list a:hover, .about-list a:focus-visible { background: rgba(160, 175, 220, 0.1); }
-.banner-links { display: flex; gap: 18px; }
+.banner-icon { display: grid; place-items: center; }
+
 
 @media (max-width: 560px) {
-  .banner-links { display: none; }
-  .about-menu { display: block; }
-  .banner nav { gap: 10px; overflow: visible; }
+  .banner nav { gap: 14px; overflow: visible; }
   .axis-end { font-size: 0.66rem; letter-spacing: 0.1em; }
   /* Narrow board: smaller names, and the side axis titles set a little lower so they fall
      between the names just below the axis (Sad, Contented) and the next ring out. */

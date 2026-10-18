@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>About senti</title>
+    <meta name="description" content="What senti is, where the name comes from, and how you can help it get better." />
+    <meta name="theme-color" content="#05060b" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>html { background: #05060b; color-scheme: dark; }</style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="/src/about/about.css" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="./" translate="no"><img src="/senti-mark.svg" alt="" width="36" height="34" />senti</a>
+      <a class="back" href="./">Find a song <span aria-hidden="true">→</span></a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>find a song for how you feel.</h1>
+        <p class="lede">
+          senti is a mood map for music. Move the light to how you’re feeling, tap play, and it finds a song
+          that fits. No sign-in and nothing to install.
+        </p>
+      </section>
+
+      <section>
+        <h2>how it works</h2>
+        <p>
+          The map has two directions. Left to right is how good a feeling is, from rough to great.
+          Bottom to top is how much energy it has, from calm to wired. Every spot on the map is a feeling:
+          tense and alert up top, serene and relaxed down below, happy on one side and sad on the other.
+        </p>
+        <p>
+          Each song sits somewhere on that map. Right now we place songs with a model that reads their lyrics
+          and learned from songs that researchers had already labelled by mood. Next, we’re teaching it to
+          listen to the music itself, not just read the words.
+        </p>
+      </section>
+
+      <section>
+        <h2>why “senti”</h2>
+        <p>
+          <i>Senti</i> is Italian. It comes from <i>sentire</i>, which means both <b>to feel</b> and
+          <b>to hear</b>. Italians also say “senti!” the way we’d say “listen!” or “hey, check this out.”
+        </p>
+        <p>
+          That’s the whole idea in one word: music is something you feel and hear at the same time, and the
+          best way to share a song is to tell someone “listen to this.”
+        </p>
+      </section>
+
+      <section>
+        <h2>what we’re aiming for</h2>
+        <p>
+          Most music apps sort songs by genre, by artist, or by what you played last week. senti sorts them by
+          feeling. The goal is a place where you can say exactly how you feel and get the right song back.
+        </p>
+        <p>
+          Today the map knows 16 feelings. Real moods are more specific than that: nostalgic, bittersweet,
+          triumphant, late-night. We want senti to learn those finer shades, so you can zoom into “happy” and
+          pick the exact kind of happy you mean.
+        </p>
+      </section>
+
+      <section class="help">
+        <h2>how you can help</h2>
+        <p>senti gets better the more people use it. The best things you can do:</p>
+        <ol>
+          <li>
+            <b>Use it.</b> Play songs, explore the map, hit “discover more” and wander around.
+          </li>
+          <li>
+            <b>Rate songs.</b> After a song plays, tell us whether it matched. If it didn’t, drop it where it
+            belongs on the map. Those corrections are the most useful thing anyone can give us.
+          </li>
+          <li>
+            <b>Tag the vibe.</b> Add a few words for how a song feels. Tags are how we’ll find the feelings the
+            map doesn’t name yet.
+          </li>
+          <li>
+            <b>Share it.</b> Send a friend a song with the share button. Every link opens straight onto that
+            song.
+          </li>
+        </ol>
+        <p class="callout">
+          Every rating and tag becomes training data. The more we collect, the better the model gets at placing
+          songs, and the closer we get to more nuanced searches, like picking “wistful” instead of just “sad.”
+        </p>
+      </section>
+
+      <section>
+        <h2>why there’s no spotify login (yet)</h2>
+        <p>
+          We’d love to let you build playlists and find songs you already love by mood, right inside your
+          Spotify. But Spotify only opens its full developer access to apps with around
+          <b>250,000 monthly users</b>. Until then, every song links out to Spotify and Apple Music instead.
+        </p>
+        <p>So if you want that feature, the fastest way there is sharing senti with your friends.</p>
+      </section>
+
+      <section>
+        <h2>your privacy</h2>
+        <p>
+          There are no accounts. Ratings and tags are saved without your name or email, under a random ID that
+          lives in your browser. Your network address is only used for a couple of minutes to stop spam,
+          then thrown away.
+        </p>
+      </section>
+
+      <section class="more">
+        <p>
+          Curious about the model, the data and the code? The technical details are on
+          <a href="https://github.com/jason-d-garcia/moodify" target="_blank" rel="noreferrer">GitHub</a>.
+          Mood labels come from the
+          <a href="https://doi.org/10.5281/zenodo.13939205" target="_blank" rel="noreferrer">MERGE dataset</a>
+          (CC BY-NC 4.0).
+        </p>
+        <a class="cta" href="./">Find a song for how you feel <span aria-hidden="true">→</span></a>
+      </section>
+    </main>
+  </body>
+</html>

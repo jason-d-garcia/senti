@@ -8,7 +8,7 @@ import type { Preview } from "../preview";
 import { sendVote, songKey, votedSongs } from "../feedback";
 import { Field } from "./Field";
 import type { FieldSong, Pt } from "./Field";
-import { AppleMusicLogo, SpotifyLogo } from "./logos";
+import { AppleMusicLogo, GitHubLogo, SpotifyLogo } from "./logos";
 import { VibePicker } from "./VibePicker";
 import { share, sharedSongKey, songLink } from "../share";
 import "./minimal.css";
@@ -106,11 +106,7 @@ const labelColor = (name: string) => COLOR[EMOTIONS.find((e) => e.name === name)
 /** Phones and tablets: say "tap", not "click". */
 const TOUCH = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 
-const LINKS = [
-  { label: "How it works", href: "?classic" },
-  { label: "Data & model", href: "https://github.com/jason-d-garcia/moodify/blob/main/data/README.md" },
-  { label: "Code", href: "https://github.com/jason-d-garcia/moodify" },
-];
+const REPO = "https://github.com/jason-d-garcia/moodify";
 
 export default function Minimal() {
   const [hits, setHits] = useState<PlacedSong[]>([]);
@@ -325,19 +321,8 @@ export default function Minimal() {
       <header className="banner">
         <span className="brand" translate="no"><img className="brand-mark" src="/senti-mark.svg" alt="" width="36" height="34" />senti</span>
         <nav aria-label="About senti">
-          <div className="banner-links">
-            {LINKS.map((l) => (
-              <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
-            ))}
-          </div>
-          <details className="about-menu">
-            <summary>About</summary>
-            <div className="about-list">
-              {LINKS.map((l) => (
-                <a key={l.label} href={l.href} {...(l.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{l.label}</a>
-              ))}
-            </div>
-          </details>
+          <a href="about.html">About</a>
+          <a href={REPO} target="_blank" rel="noreferrer" className="banner-icon" aria-label="Code on GitHub" title="Code on GitHub"><GitHubLogo /></a>
           <button type="button" className="banner-share" onClick={shareSite} aria-label="Share senti">
             <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />

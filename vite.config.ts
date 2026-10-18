@@ -5,4 +5,6 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "./",
   plugins: [react()],
+  // Two pages: the app, and the plain-language About page.
+  build: { rollupOptions: { input: { main: "index.html", about: "about.html" } } },
 });
