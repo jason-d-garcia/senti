@@ -3,7 +3,7 @@ import catalogJson from "../data/catalog.json";
 import { loadHits } from "../catalog";
 import { EMOTIONS, MIXED_EMOJI, emotionAt, placeSong, spotifySearchUrl } from "../mood";
 import type { Mood, PlacedSong, Song } from "../mood";
-import { findPreview } from "../preview";
+import { findPreview, isRateLimited, waitForBudget } from "../preview";
 import type { Preview } from "../preview";
 import { sendVote, songKey, votedSongs } from "../feedback";
 import { Field } from "./Field";
@@ -124,6 +124,7 @@ export default function Minimal() {
   const [pick, setPick] = useState<Pick | null>(null);
   const [finding, setFinding] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [placeAt, setPlaceAt] = useState<Pt>(dot);
   const [pinned, setPinned] = useState(false);
   const [placePinned, setPlacePinned] = useState(false);
@@ -163,8 +164,16 @@ export default function Minimal() {
     const done = votedSongs();
     const inSection = songs.filter((s) => sectionOf(s) === section);
     const fresh = inSection.filter((s) => !done.has(songKey(s)));
-    for (const s of shuffle(fresh.length ? fresh : inSection).slice(0, TRIES)) {
+    const queue = shuffle(fresh.length ? fresh : inSection);
+    for (let i = 0, tries = 0; i < queue.length && tries < TRIES; i++) {
+      const s = queue[i];
+      // Over iTunes' per-minute limit: wait it out (still "Finding a song…") instead of failing.
+      setWaiting(isRateLimited());
+      await waitForBudget();
+      setWaiting(false);
       const p = await findPreview(s);
+      if (!p && isRateLimited()) { i--; continue; } // refused, not a miss: retry this song once allowed
+      tries++;
       if (p) {
         setPick({ song: s, preview: p, step: "listen" });
         setProgress(0); setPlaying(false); setFinding(false);
@@ -284,8 +293,10 @@ export default function Minimal() {
     const todo = nearby.filter((n) => n.featured && !(n.song.id in covers)).map((n) => n.song);
     (async () => {
       for (const s of todo) {
-        if (cancelled) return;
+        // Covers leave a few lookups a minute free, so pressing play never hits the limit.
+        if (!(await waitForBudget(6, () => cancelled))) return;
         const p = await findPreview(s);
+        if (!p && isRateLimited()) continue;
         if (cancelled) return;
         setCovers((c) => ({ ...c, [s.id]: p?.artworkUrl ?? null }));
       }
@@ -409,7 +420,7 @@ export default function Minimal() {
                     <span className="find-icon" aria-hidden="true">▶</span>
                     {finding ? "Finding a song…" : `Play me something ${section.toLowerCase()}`}
                   </button>
-                  <p className="hint">{notFound ? "Couldn’t find a playable song here. Try another spot."
+                  <p className="hint">{waiting ? "Lots of lookups just now; trying again in a moment…" : notFound ? "Couldn’t find a playable song here. Try another spot."
                     : TOUCH ? "Tap anywhere to move the light." : "Click anywhere to move the light."}</p>
                 </div>
               </>

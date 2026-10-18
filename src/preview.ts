@@ -32,25 +32,71 @@ export function isMatch(song: { title: string; artist: string }, t: ItunesTrack)
   return [...a].some((w) => b.has(w));
 }
 
+// The iTunes search allows roughly 20 lookups a minute per visitor. Going over it makes every lookup fail for a
+// while, which used to read as "no playable song here" and stuck: failures were cached as misses. Now lookups
+// are counted, covers leave room for play presses, failures are never cached, and answers are remembered.
+const PER_MINUTE = 18;
+const recent: number[] = [];
+let blockedUntil = 0;
+const prune = () => { const t = Date.now() - 60_000; while (recent.length && recent[0] < t) recent.shift(); };
+
+/** True while iTunes is refusing lookups (we went over its limit); clears itself after a minute. */
+export const isRateLimited = () => Date.now() < blockedUntil;
+
+/** Resolves once a lookup can go out while still leaving `reserve` of the minute's budget unused. */
+export async function waitForBudget(reserve = 0, cancelled: () => boolean = () => false): Promise<boolean> {
+  for (;;) {
+    if (cancelled()) return false;
+    prune();
+    if (!isRateLimited() && recent.length < PER_MINUTE - reserve) return true;
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+}
+
+const STORE = "senti:preview:";
+const WEEK = 7 * 24 * 3600 * 1000;
+function remembered(key: string): Preview | null | undefined {
+  try {
+    const raw = localStorage.getItem(STORE + key);
+    if (!raw) return undefined;
+    const { at, p } = JSON.parse(raw) as { at: number; p: Preview | null };
+    return Date.now() - at < WEEK ? p : undefined;
+  } catch { return undefined; }
+}
+function remember(key: string, p: Preview | null) {
+  try { localStorage.setItem(STORE + key, JSON.stringify({ at: Date.now(), p })); } catch { /* storage full or blocked */ }
+}
+
 const cache = new Map<string, Promise<Preview | null>>();
 
 export function findPreview(song: { title: string; artist: string }): Promise<Preview | null> {
   const key = `${song.title}\u0000${song.artist}`;
   let hit = cache.get(key);
-  if (!hit) {
-    const term = encodeURIComponent(`${song.artist} ${song.title.replace(/\(.*?\)/g, "")}`);
-    hit = fetch(`https://itunes.apple.com/search?term=${term}&entity=song&limit=15&country=US`)
-      .then((r) => (r.ok ? r.json() : { results: [] }))
-      .then(({ results }: { results: ItunesTrack[] }) => {
-        const t = results.find((r) => isMatch(song, r));
-        return t ? { audioUrl: t.previewUrl!, pageUrl: t.trackViewUrl ?? "https://music.apple.com",
-          artworkUrl: t.artworkUrl100?.replace(/100x100bb/, "600x600bb") } : null;
-      })
-      .catch(() => {
-        cache.delete(key); // network error: allow a retry
-        return null;
-      });
-    cache.set(key, hit);
-  }
+  if (hit) return hit;
+  const saved = remembered(key);
+  if (saved !== undefined) { hit = Promise.resolve(saved); cache.set(key, hit); return hit; }
+  if (isRateLimited()) return Promise.resolve(null);
+  prune(); recent.push(Date.now());
+  const term = encodeURIComponent(`${song.artist} ${song.title.replace(/\(.*?\)/g, "")}`);
+  hit = fetch(`https://itunes.apple.com/search?term=${term}&entity=song&limit=15&country=US`)
+    .then((r) => {
+      if (!r.ok) throw new Error(`iTunes ${r.status}`);
+      return r.json();
+    })
+    .then(({ results }: { results: ItunesTrack[] }) => {
+      const t = results.find((r) => isMatch(song, r));
+      const p = t ? { audioUrl: t.previewUrl!, pageUrl: t.trackViewUrl ?? "https://music.apple.com",
+        artworkUrl: t.artworkUrl100?.replace(/100x100bb/, "600x600bb") } : null;
+      remember(key, p);
+      return p;
+    })
+    .catch(() => {
+      // Refused or offline (an over-limit reply also fails CORS): not a real miss, so don't keep it.
+      cache.delete(key);
+      // A lookup cut off because the page went to the background (e.g. the share sheet) isn't a refusal.
+      if (typeof document === "undefined" || document.visibilityState === "visible") blockedUntil = Date.now() + 60_000;
+      return null;
+    });
+  cache.set(key, hit);
   return hit;
 }
