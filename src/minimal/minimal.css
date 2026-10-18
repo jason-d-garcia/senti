@@ -470,3 +470,5 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 @media (hover: hover) and (pointer: fine) and (min-aspect-ratio: 4/5) {
   .board { width: min(100%, calc(100dvh - 196px)); }
 }
+/* Radio toggle: lit in the mood colour while on. */
+.radio-btn[aria-pressed="true"] { background: color-mix(in srgb, var(--glow) 22%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--glow) 55%, transparent) inset; }

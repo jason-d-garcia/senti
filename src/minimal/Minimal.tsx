@@ -194,6 +194,50 @@ export default function Minimal() {
     touched();
   };
 
+  // Radio: when a preview ends, the next song from the same part of the map starts by itself.
+  const [radio, setRadio] = useState(() => { try { return localStorage.getItem("senti:radio") !== "off"; } catch { return true; } });
+  useEffect(() => { try { localStorage.setItem("senti:radio", radio ? "on" : "off"); } catch { /* blocked */ } }, [radio]);
+  const played = useRef(new Set<string>());
+  const advancing = useRef(false);
+  useEffect(() => { if (pick) played.current.add(pick.song.id); }, [pick]);
+  /** Nearest unplayed songs in the same emotion, a little shuffled so the radio doesn't always run one way. */
+  const radioQueue = (from: PlacedSong) => {
+    const sec = sectionOf(from), d = (s: PlacedSong) => Math.hypot(s.valence - from.valence, s.arousal - from.arousal);
+    let pool = songs.filter((s) => sectionOf(s) === sec && !played.current.has(s.id));
+    if (!pool.length) { played.current.clear(); played.current.add(from.id); pool = songs.filter((s) => sectionOf(s) === sec && s.id !== from.id); }
+    return shuffle(pool.sort((a, b) => d(a) - d(b)).slice(0, 12));
+  };
+  const playNext = async () => {
+    const from = pick?.song;
+    if (!from || advancing.current) return;
+    advancing.current = true;
+    audio.current?.pause();
+    for (const s of radioQueue(from).slice(0, TRIES)) {
+      await waitForBudget();
+      const p = await findPreview(s);
+      if (!p) continue;
+      setPick({ song: s, preview: p, step: "listen" }); setProgress(0);
+      const el = audio.current;
+      if (el) { el.src = p.audioUrl; el.volume = PREVIEW_VOLUME; el.play().catch(() => setPlaying(false)); }
+      break;
+    }
+    advancing.current = false;
+  };
+  const onEnded = () => {
+    setPlaying(false); setProgress(0);
+    if (radio && pick && pick.step !== "place") void playNext();
+  };
+  // Lock-screen and headphone controls.
+  useEffect(() => {
+    const ms = typeof navigator !== "undefined" ? navigator.mediaSession : undefined;
+    if (!ms || !pick) return;
+    try {
+      ms.metadata = new MediaMetadata({ title: pick.song.title, artist: pick.song.artist, album: "senti",
+        artwork: pick.preview.artworkUrl ? [{ src: pick.preview.artworkUrl, sizes: "600x600", type: "image/jpeg" }] : [] });
+      ms.setActionHandler("nexttrack", () => void playNext());
+    } catch { /* not supported */ }
+  });
+
   const model = pick ? { v: pick.song.valence, a: pick.song.arousal } : null;
   const vote = (agree: boolean, at?: Pt) => {
     if (!pick || !model) return;
@@ -214,7 +258,9 @@ export default function Minimal() {
   const close = () => { audio.current?.pause(); setPick(null); findBtn.current?.focus({ preventScroll: true }); };
   // A new song card takes focus, so keyboard and screen-reader users land on it.
   const cardSong = pick && pick.step !== "place" ? pick.song.id : null;
-  useEffect(() => { if (cardSong) card.current?.focus({ preventScroll: true }); }, [cardSong]);
+  useEffect(() => {
+    if (cardSong && !card.current?.contains(document.activeElement)) card.current?.focus({ preventScroll: true });
+  }, [cardSong]);
   // Tab cycles within the card while it's open; Escape or × closes it.
   const trapTab = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== "Tab" || !card.current) return;
@@ -446,6 +492,15 @@ export default function Minimal() {
                 <div className="links">
                   <a href={spotifySearchUrl(pick.song)} target="_blank" rel="noreferrer" onClick={touched}><SpotifyLogo /> Spotify</a>
                   <a href={pick.preview.pageUrl} target="_blank" rel="noreferrer" onClick={touched}><AppleMusicLogo /> Apple Music</a>
+                  <button type="button" className="share-btn radio-btn" aria-pressed={radio} onClick={() => setRadio((r) => !r)}
+                    title={radio ? "Radio on: the next song plays when this one ends" : "Radio off"}>
+                    <span aria-hidden="true">📻</span> Radio
+                  </button>
+                  {radio && (
+                    <button type="button" className="share-btn" onClick={() => void playNext()} aria-label="Next song">
+                      <span aria-hidden="true">⏭</span> Next
+                    </button>
+                  )}
                   <button type="button" className="share-btn" onClick={shareSong} aria-label={`Share ${pick.song.title}`}>
                     <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
@@ -494,7 +549,7 @@ export default function Minimal() {
         preload="none"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={() => { setPlaying(false); setProgress(0); }}
+        onEnded={onEnded}
         onTimeUpdate={(e) => setProgress(e.currentTarget.duration ? e.currentTarget.currentTime / e.currentTarget.duration : 0)}
       />
     </div>
