@@ -23,24 +23,29 @@
 
     <main id="content">
       <section class="hero">
-        <h1>Find a song for <span class="rainbow">exactly how you feel.</span></h1>
+        <h1>Find a song for <span class="accent">how you feel.</span></h1>
         <p class="lede">
           senti is a mood map for music. Move the light to how you’re feeling, tap play, and out comes a song
           that fits. No sign-in, nothing to install, just music.
         </p>
         <ul class="moods" aria-label="A few of the feelings on the map">
-          <li style="--c: #f6b93b"><span aria-hidden="true">😄</span>happy</li>
-          <li style="--c: #f6b93b"><span aria-hidden="true">🤩</span>excited</li>
-          <li style="--c: #31c9a3"><span aria-hidden="true">😌</span>serene</li>
-          <li style="--c: #31c9a3"><span aria-hidden="true">🌿</span>relaxed</li>
-          <li style="--c: #5b8cff"><span aria-hidden="true">🌧️</span>sad</li>
-          <li style="--c: #f0604d"><span aria-hidden="true">😤</span>tense</li>
+          <li style="--c: #f6b93b">happy</li>
+          <li style="--c: #f6b93b">excited</li>
+          <li style="--c: #31c9a3">serene</li>
+          <li style="--c: #31c9a3">relaxed</li>
+          <li style="--c: #5b8cff">sad</li>
+          <li style="--c: #f0604d">tense</li>
         </ul>
         <a class="cta" href="./">Find a song <span aria-hidden="true">→</span></a>
+        <figure class="shot hero-shot">
+          <video src="/about/map-loop.mp4" poster="/about/map-loop-poster.jpg" width="1280" height="764" autoplay muted loop playsinline
+            aria-label="The light travels around the senti mood map, through each feeling in turn."></video>
+        </figure>
       </section>
 
-      <section>
-        <h2><span class="icon" style="--c: #f6b93b" aria-hidden="true">🎧</span>How it works</h2>
+      <section class="split">
+        <div>
+        <h2><span class="icon" style="--c: #f6b93b" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="5" height="7" rx="2"/><rect x="16" y="14" width="5" height="7" rx="2"/></svg></span>How it works</h2>
         <p>
           The map has two directions. Left to right is how good a feeling is, from rough to great.
           Bottom to top is how much energy it has, from calm to wired. Every spot on the map is a feeling:
@@ -51,10 +56,14 @@
           and learned from songs that researchers had already labelled by mood. Next, we’re teaching it to
           listen to the music itself, not just read the words.
         </p>
+        </div>
+        <figure class="shot phone-shot">
+          <img src="/about/phone.jpg" width="780" height="1688" loading="lazy" alt="senti on a phone: the map fills the screen, with a button to play something excited." />
+        </figure>
       </section>
 
       <section>
-        <h2><span class="icon" style="--c: #31c9a3" aria-hidden="true">🇮🇹</span>Why “senti”</h2>
+        <h2><span class="icon" style="--c: #31c9a3" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span>Why “senti”</h2>
         <p>
           <i>Senti</i> is Italian. It comes from <i>sentire</i>, which means both <b>to feel</b> and
           <b>to hear</b>. Italians also say “senti!” the way we’d say “listen!” or “hey, check this out.”
@@ -66,7 +75,7 @@
       </section>
 
       <section>
-        <h2><span class="icon" style="--c: #5b8cff" aria-hidden="true">🌈</span>What we’re aiming for</h2>
+        <h2><span class="icon" style="--c: #5b8cff" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg></span>What we’re aiming for</h2>
         <p>
           Most music apps sort songs by genre, by artist, or by what you played last week. senti sorts them by
           feeling. The goal is a place where you can say exactly how you feel and get the right song back.
@@ -76,10 +85,13 @@
           triumphant, late-night. We want senti to learn those finer shades, so you can zoom into “happy” and
           pick the exact kind of happy you mean.
         </p>
+        <figure class="shot">
+          <img src="/about/sad.jpg" width="1600" height="955" loading="lazy" alt="The map with the light moved down into lethargic, in the blue quarter." />
+        </figure>
       </section>
 
       <section class="help">
-        <h2><span class="icon" style="--c: #f0604d" aria-hidden="true">🙌</span>How you can help</h2>
+        <h2><span class="icon" style="--c: #f0604d" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span>How you can help</h2>
         <p>senti gets better the more people use it. The best things you can do:</p>
         <ol>
           <li>
@@ -102,21 +114,24 @@
           Every rating and tag becomes training data. The more we collect, the better the model gets at placing
           songs, and the closer we get to more nuanced searches, like picking “wistful” instead of just “sad.”
         </p>
+        <figure class="shot">
+          <img src="/about/song.jpg" width="1600" height="955" loading="lazy" alt="A song card on the map: a relaxed song with Spotify, Apple Music and share buttons." />
+        </figure>
       </section>
 
       <section>
-        <h2><span class="icon" style="--c: #f6b93b" aria-hidden="true">💿</span>Spotify &amp; Apple Music, soon</h2>
+        <h2><span class="icon" style="--c: #f6b93b" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg></span>Spotify &amp; Apple Music, soon</h2>
         <p>
           We’d love to let you sign in with Spotify or Apple Music, save what you find straight into a playlist,
           and sort the songs you already love by mood. Spotify only opens its full developer access to apps with
           around <b>250,000 monthly users</b>, and Apple Music needs its own setup on Apple’s side. We’re working
           toward both. Until then, every song links out to Spotify and Apple Music so you can keep listening there.
         </p>
-        <p>Want it sooner? The fastest way there is sharing senti with your friends. 💛</p>
+        <p>Want it sooner? The fastest way there is sharing senti with your friends.</p>
       </section>
 
       <section>
-        <h2><span class="icon" style="--c: #31c9a3" aria-hidden="true">🔒</span>Your privacy</h2>
+        <h2><span class="icon" style="--c: #31c9a3" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>Your privacy</h2>
         <p>
           There are no accounts. Ratings and tags are saved without your name or email, under a random ID that
           lives in your browser. Your network address is only used for a couple of minutes to stop spam,
@@ -135,5 +150,19 @@
         <a class="cta" href="./">Find a song <span aria-hidden="true">→</span></a>
       </section>
     </main>
+    <script>
+      // Each section's parts rise in as it scrolls into view. Without this script (or with reduced motion) everything just shows.
+      (() => {
+        if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        document.documentElement.classList.add("reveal");
+        document.querySelectorAll("section").forEach((sec) => {
+          sec.querySelectorAll("h1, h2, p, ol, ul, .cta, figure").forEach((el, i) => el.style.setProperty("--d", `${Math.min(i, 6) * 75}ms`));
+        });
+        const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+        }), { rootMargin: "0px 0px -8% 0px" });
+        document.querySelectorAll("section").forEach((sec) => io.observe(sec));
+      })();
+    </script>
   </body>
 </html>
