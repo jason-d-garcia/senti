@@ -342,6 +342,8 @@ export default function Minimal() {
         } : {}) as React.CSSProperties}
       >
         <div className="page-glow" aria-hidden="true" />
+        <div className="page-grain" aria-hidden="true" />
+        <div className="page-grain is-dense" aria-hidden="true" />
         <div className="page-axes" aria-hidden="true">
           <span className="axis axis-x" /><span className="axis axis-y" />
           <span className="axis-end end-right">Feels good →</span>

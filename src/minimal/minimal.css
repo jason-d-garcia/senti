@@ -36,25 +36,49 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 /* Room is kept under the board for the emotion panel, so it never covers the map. */
 .stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px 12px 224px; overflow: hidden; }
 
-/* Page-wide glow in the quadrant colours, brightest at the page edges (CSS conic angles run clockwise from the top). */
-.page-glow {
+/* Page-wide glow in the quadrant colours (CSS conic angles run clockwise from the top). It radiates from the
+   centre of the map all the way to the screen edges: a soft wash near the map, then a grain of colour that thins
+   out and fades towards the edges. A small clear spot in the middle keeps it off the light and the centre labels. */
+.page-glow, .page-grain {
   position: absolute; inset: 0; pointer-events: none;
   background: conic-gradient(from 0deg at var(--cx, 50%) var(--cy, 50%),
     #f6b93b 0deg, #f6b93b 30deg, #31c9a3 120deg, #31c9a3 150deg,
     #5b8cff 210deg, #5b8cff 240deg, #f0604d 300deg, #f0604d 330deg, #f6b93b 360deg);
-  /* Radiates out from the centre of the map and fades well before the edges; a small clear spot
-     in the middle keeps it off the light and the centre labels. */
-  -webkit-mask-image: radial-gradient(circle var(--bh, 40vh) at var(--cx, 50%) var(--cy, 50%), transparent 6%, #000 22%, rgba(0, 0, 0, 0.5) 52%, transparent 100%);
-  mask-image: radial-gradient(circle var(--bh, 40vh) at var(--cx, 50%) var(--cy, 50%), transparent 6%, #000 22%, rgba(0, 0, 0, 0.5) 52%, transparent 100%);
-  opacity: 0.13;
   /* Zooms with the map (same timing as .zoom-layer), so zoomed in, the region is lit from the
      direction of the map's centre. --zv/--za is the zoom centre in grid units, --zk the zoom. */
   transform-origin: calc(var(--cx, 50%) + var(--zv, 0) * var(--bh, 40vh)) calc(var(--cy, 50%) - var(--za, 0) * var(--bh, 40vh));
   transform: translate(calc(var(--zv, 0) * var(--bh, 40vh) * -1), calc(var(--za, 0) * var(--bh, 40vh))) scale(var(--zk, 1));
   transition: opacity 600ms ease, transform 750ms cubic-bezier(0.65, 0, 0.25, 1);
 }
-.stage.is-discovering .page-glow { opacity: 0; }
-.stage.is-panning .page-glow { transition: opacity 600ms ease; }
+.page-glow {
+  --fade: radial-gradient(circle farthest-corner at var(--cx, 50%) var(--cy, 50%),
+    transparent calc(var(--bh, 40vh) * 0.06), #000 calc(var(--bh, 40vh) * 0.22), rgba(0, 0, 0, 0.5) calc(var(--bh, 40vh) * 0.52),
+    rgba(0, 0, 0, 0.3) var(--bh, 40vh), rgba(0, 0, 0, 0.12) calc(var(--bh, 40vh) * 1.8), transparent 100%);
+  -webkit-mask-image: var(--fade);
+  mask-image: var(--fade);
+  opacity: 0.13;
+}
+/* The grain: specks of the same colours, denser and brighter near the map, sparser and fainter towards the edges. */
+.page-grain {
+  --fade: radial-gradient(circle farthest-corner at var(--cx, 50%) var(--cy, 50%),
+    transparent calc(var(--bh, 40vh) * 0.4), #000 calc(var(--bh, 40vh) * 0.9), rgba(0, 0, 0, 0.45) calc(var(--bh, 40vh) * 1.4), transparent 100%);
+  -webkit-mask-image: url("/glow-grain.svg"), var(--fade);
+  -webkit-mask-composite: source-in;
+  mask-image: url("/glow-grain.svg"), var(--fade);
+  mask-composite: intersect;
+  mask-size: 240px 240px, 100% 100%;
+  -webkit-mask-size: 240px 240px, 100% 100%;
+  opacity: 0.18;
+}
+/* A second layer of specks that stops sooner, so they thin out with distance as well as fading. */
+.page-grain.is-dense {
+  --fade: radial-gradient(circle farthest-corner at var(--cx, 50%) var(--cy, 50%),
+    transparent calc(var(--bh, 40vh) * 0.45), #000 calc(var(--bh, 40vh) * 0.95), transparent calc(var(--bh, 40vh) * 1.6));
+  -webkit-mask-image: url("/glow-grain-2.svg"), var(--fade);
+  mask-image: url("/glow-grain-2.svg"), var(--fade);
+}
+.stage.is-discovering .page-glow, .stage.is-discovering .page-grain { opacity: 0; }
+.stage.is-panning .page-glow, .stage.is-panning .page-grain { transition: opacity 600ms ease; }
 
 /* Axes run to the edges of the screen; their titles sit at the ends with a soft white glow. */
 .page-axes { position: absolute; inset: 0; pointer-events: none; transition: opacity 500ms ease; }
@@ -368,7 +392,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 @media (prefers-reduced-motion: reduce) {
   .card, .ask, .thumb span, .song-dot, .discover-bar, .toast { animation: none !important; }
   .wheel-track, .wheel-item, .find, .dock, .dock-more, .light, .song-dot,
-  .zoom-layer, .sections-g, .page-glow, .page-axes { transition: none !important; }
+  .zoom-layer, .sections-g, .page-glow, .page-grain, .page-axes { transition: none !important; }
 }
 
 /* Vibe tags */
