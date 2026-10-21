@@ -15,14 +15,14 @@ const IDLE_SPARKLE_MS = 240;
 const RAY = 12;
 /** Pixels: the light stops this far short of the screen edge. */
 const EDGE = 10;
-/** Distance of the emotion names from the centre; a little closer in on narrow screens so they don't crowd the axis titles. */
-const NARROW = typeof window !== "undefined" && window.matchMedia("(max-width: 560px)").matches;
-const R_LABEL = NARROW ? 0.68 : 0.66;
-/** The four names either side of the vertical axis sit further out, where their narrow sections are wide enough to hold them. */
-const NEAR_AXIS = [67.5, 90, 247.5, 270];
-const labelRadius = (from: number) => (NEAR_AXIS.includes(from) ? (NARROW ? 0.76 : 0.8) : R_LABEL);
-/** On narrow screens those sections are too slim for the larger names, so the pairs are set flush away from the axis (Tense|Alert). */
-const hug = (from: number) => (!NARROW || !NEAR_AXIS.includes(from) ? "" : from === 90 || from === 247.5 ? " hug-l" : " hug-r");
+/** Distance of the emotion names from the centre, in board half-widths: one ring for all sixteen. */
+const R_LABEL = 0.7;
+/** Each name runs along its section's middle ray, reading outward on the right half and inward on the left so
+ *  none is upside down. `aspect` is the board's height / width (4:5 on phones stretches the rays). */
+const labelTurn = (mid: number, aspect: number) => {
+  const deg = (Math.atan2(Math.sin(mid) * aspect, Math.cos(mid)) * 180) / Math.PI;
+  return Math.cos(mid) >= 0 ? -deg : 180 - deg;
+};
 
 export interface Pt { valence: number; arousal: number }
 
@@ -60,6 +60,17 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   const pan = useRef<{ x: number; y: number; from: Pt } | null>(null);
   const [panCenter, setPanCenter] = useState<Pt | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  // The board's height / width, so the names line up with the section lines on non-square boards.
+  const [aspect, setAspect] = useState(1);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => { if (el.offsetWidth) setAspect(el.offsetHeight / el.offsetWidth); };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const light = useRef<HTMLSpanElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const particles = useRef<Particle[]>([]);
@@ -319,8 +330,9 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
           const mid = rad((e.from + e.to) / 2);
           return (
             <span key={e.name} aria-hidden="true"
-              className={`emotion-label${active === e ? " is-active" : ""}${hug(e.from)}`}
-              style={{ ...pos({ valence: labelRadius(e.from) * Math.cos(mid), arousal: labelRadius(e.from) * Math.sin(mid) }), color: labelColor(e.name) }}>
+              className={`emotion-label${active === e ? " is-active" : ""}`}
+              style={{ ...pos({ valence: R_LABEL * Math.cos(mid), arousal: R_LABEL * Math.sin(mid) }), color: labelColor(e.name),
+                "--turn": `${labelTurn(mid, aspect)}deg` } as React.CSSProperties}>
               {e.name}
             </span>
           );

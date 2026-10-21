@@ -178,19 +178,15 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 /* Emotion names on the map: faint, brighter and larger in the light's section, clearer while placing a song. */
 .emotion-label {
   --grow: 1.8;
-  position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--k, 1)));
+  position: absolute; transform: translate(-50%, -50%) rotate(var(--turn, 0deg)) scale(calc(1 / var(--k, 1)));
   font: 600 0.86rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
   opacity: 0.4; pointer-events: none; user-select: none;
   transition: opacity 300ms ease, transform 300ms ease, text-shadow 300ms ease;
 }
 .emotion-label.is-active {
-  opacity: 1; transform: translate(-50%, -50%) scale(calc(var(--grow) / var(--k, 1)));
+  opacity: 1; transform: translate(-50%, -50%) rotate(var(--turn, 0deg)) scale(calc(var(--grow) / var(--k, 1)));
   text-shadow: 0 0 14px currentColor;
 }
-.emotion-label.hug-l { transform: translate(calc(-100% + 6px), -50%) scale(calc(1 / var(--k, 1))); transform-origin: right center; }
-.emotion-label.hug-r { transform: translate(-6px, -50%) scale(calc(1 / var(--k, 1))); transform-origin: left center; }
-.emotion-label.hug-l.is-active { transform: translate(calc(-100% + 6px), -50%) scale(calc(var(--grow) / var(--k, 1))); }
-.emotion-label.hug-r.is-active { transform: translate(-6px, -50%) scale(calc(var(--grow) / var(--k, 1))); }
 .field.is-placing .emotion-label { opacity: 0.72; }
 .field.is-placing .emotion-label.is-active { opacity: 1; }
 .field.is-zoomed .emotion-label { opacity: 0; }
