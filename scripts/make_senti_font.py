@@ -207,17 +207,19 @@ def svg_parts(text: str, x0=0.0, y0=0.0, ink="#eef1f8", sw=SW, dot=None, trackin
 
 
 # --- the mark -------------------------------------------------------------------------------------
-def mark_body(ink, top_dot, bottom_dot, sw=5.2):
-    """Compact s with a smile colon (top) and a frown colon (bottom) on its right. Box 0..80 x 0..60."""
+def mark_body(happy, sad, dot, sw=5.2):
+    """Compact s, its upper half happy (amber) and lower half sad (blue), split along its middle stroke, with a
+    plain colon pair close on its right. Box 0..64 x 0..60."""
     x, top, w, h = 6, 10, 42, 36
     bot = top + h
-    cx = x + w + 17
+    cx = x + w + 10
     d = sw * 0.7
-    body = (f'<path d="{s_shape(x, w, top, bot, 11)}" fill="none" stroke="{ink}" stroke-width="{sw}" '
+    body = (f'<linearGradient id="senti-s" gradientUnits="userSpaceOnUse" x1="0" y1="{top}" x2="0" y2="{bot}">'
+            f'<stop offset="0.5" stop-color="{happy}"/><stop offset="0.5" stop-color="{sad}"/></linearGradient>'
+            f'<path d="{s_shape(x, w, top, bot, 11)}" fill="none" stroke="url(#senti-s)" stroke-width="{sw}" '
             f'stroke-linecap="round" stroke-linejoin="round"/>')
-    dots = [(cx, top + h * 0.12, top_dot), (cx, top + h * 0.36, top_dot),
-            (cx, top + h * 0.64, bottom_dot), (cx, top + h * 0.88, bottom_dot)]
-    return body + "".join(f'<circle cx="{px:.2f}" cy="{py:.2f}" r="{d:.2f}" fill="{c}"/>' for px, py, c in dots)
+    dots = [(cx, top + h * f) for f in (0.12, 0.36, 0.64, 0.88)]
+    return body + "".join(f'<circle cx="{px:.2f}" cy="{py:.2f}" r="{d:.2f}" fill="{dot}"/>' for px, py in dots)
 
 
 # --- font building --------------------------------------------------------------------------------

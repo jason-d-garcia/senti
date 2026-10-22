@@ -408,7 +408,7 @@ export default function Minimal() {
   return (
     <div className="minimal" style={{ "--glow": color } as React.CSSProperties}>
       <header className="banner">
-        <span className="brand" translate="no" tabIndex={0} aria-label="senti"><span aria-hidden="true">s</span><span className="logo-rest" aria-hidden="true"><span>enti</span></span><svg className="logo-dots" viewBox="0 -2.5 6 27" aria-hidden="true"><circle cx="3" cy="2.64" r="2.22" fill="#f6b93b"/><circle cx="3" cy="7.92" r="2.22" fill="#f6b93b"/><circle cx="3" cy="14.08" r="2.22" fill="#5b8cff"/><circle cx="3" cy="19.36" r="2.22" fill="#5b8cff"/></svg></span>
+        <span className="brand" translate="no" tabIndex={0} aria-label="senti"><span className="logo-s" aria-hidden="true">s</span><span className="logo-rest" aria-hidden="true"><span>enti</span></span><svg className="logo-dots" viewBox="0 -2.5 6 27" aria-hidden="true"><circle cx="3" cy="2.64" r="2.22" fill="#eef1f8"/><circle cx="3" cy="7.92" r="2.22" fill="#eef1f8"/><circle cx="3" cy="14.08" r="2.22" fill="#eef1f8"/><circle cx="3" cy="19.36" r="2.22" fill="#eef1f8"/></svg></span>
         <nav aria-label="About senti">
           <a href="about.html">About</a>
           <a href={REPO} target="_blank" rel="noreferrer" className="banner-icon" aria-label="Code on GitHub" title="Code on GitHub"><GitHubLogo /></a>

@@ -44,7 +44,14 @@ a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-rad
 .brand { display: inline-flex; align-items: baseline; font: 400 1.75rem/1 var(--font-brand); font-synthesis: none; color: var(--ink); text-decoration: none; outline: none; }
 .logo-rest { display: inline-grid; grid-template-columns: 0fr; transition: grid-template-columns 420ms cubic-bezier(0.65, 0, 0.25, 1); }
 .logo-rest > span { min-width: 0; overflow: hidden; opacity: 0; transition: opacity 300ms ease; }
-.logo-dots { width: auto; height: 0.638em; margin-left: 0.17em; align-self: baseline; transform: translateY(0.059em); }
+/* The s carries the mood: happy amber above its middle stroke, sad blue below (the split sits on the glyph's
+   middle, 0.26em above the baseline). The colon beside it is plain white. */
+.logo-s {
+  display: inline-block; line-height: 1;
+  background: linear-gradient(to bottom, #f6b93b 50.9%, #5b8cff 50.9%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.logo-dots { width: auto; height: 0.638em; margin-left: 0.05em; align-self: baseline; transform: translateY(0.059em); }
 .brand:hover .logo-rest, .brand:focus-visible .logo-rest { grid-template-columns: 1fr; }
 .brand:hover .logo-rest > span, .brand:focus-visible .logo-rest > span { opacity: 1; transition-delay: 90ms; }
 .brand:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; border-radius: 6px; }
