@@ -3,6 +3,10 @@
  *
  *   npx vite-node scripts/songs.ts prefetch   # look up each song's 30-second preview and cover once (slow, resumable)
  *   npx vite-node scripts/songs.ts shards     # write public/songs/<emotion>.json from the catalogue + looked-up previews
+ *   npx vite-node scripts/songs.ts audio-csv  # data/catalog_previews.csv for colab_audio_catalog.ipynb (no lyrics)
+ *
+ * When data/catalog_audio_scores.csv (that notebook's output) is present, shards places each song by its blended
+ * lyrics + audio score instead of the lyrics score alone.
  *
  * prefetch asks the iTunes Search API politely (about 15 lookups a minute, under its ~20/minute limit) and appends
  * every answer to data/previews.jsonl, so it can be stopped and restarted at any time and picks up where it left off.
@@ -83,10 +87,50 @@ async function prefetch() {
   console.log(`finished: ${done} looked up, ${found} with previews`);
 }
 
+/** Minimal CSV parsing for the notebook's output (quoted fields, commas inside quotes). */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = []; let row: string[] = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (ch !== "\r") cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+const csvCell = (v: string | number) => (typeof v === "number" ? String(v) : `"${v.replace(/"/g, '""')}"`);
+
+/** Blended lyrics + audio positions from colab_audio_catalog.ipynb, by title and artist. */
+function audioScores(): Map<string, [number, number]> {
+  const m = new Map<string, [number, number]>();
+  const path = join(ROOT, "data", "catalog_audio_scores.csv");
+  if (!existsSync(path)) return m;
+  const [head, ...rows] = parseCsv(readFileSync(path, "utf8"));
+  const at = (n: string) => head.indexOf(n);
+  for (const r of rows) if (r.length === head.length) m.set(keyOf(r[at("title")], r[at("artist")]), [+r[at("fused_v")], +r[at("fused_a")]]);
+  return m;
+}
+
+function audioCsv() {
+  const cache = loadCache();
+  const lines = ["title,artist,lyrics_v,lyrics_a,preview_url"];
+  for (const [title, artist, v, a] of catalogue()) {
+    const p = cache.get(keyOf(title, artist));
+    if (p) lines.push([csvCell(title), csvCell(artist), v, a, csvCell(p[0])].join(","));
+  }
+  writeFileSync(join(ROOT, "data", "catalog_previews.csv"), lines.join("\n") + "\n");
+  console.log(`wrote data/catalog_previews.csv (${lines.length - 1} songs with previews)`);
+}
+
 function shards() {
   const cache = loadCache();
+  const audio = audioScores();
   const by = new Map<string, unknown[][]>(SECTIONS.map((s) => [s, []]));
-  catalogue().forEach(([title, artist, v, a, year, peak], i) => {
+  catalogue().forEach(([title, artist, lv, la, year, peak], i) => {
+    const [v, a] = audio.get(keyOf(title, artist)) ?? [lv, la];
     const sec = emotionAt(v, a)?.name ?? "Mixed";
     const p = cache.get(keyOf(title, artist));
     // [index, title, artist, valence, arousal, year, peak, preview?]; the index keeps song ids stable.
@@ -95,10 +139,12 @@ function shards() {
   mkdirSync(OUT, { recursive: true });
   for (const [sec, rows] of by) writeFileSync(join(OUT, `${sectionSlug(sec)}.json`), JSON.stringify({ songs: rows }));
   const withPreview = [...cache.values()].filter(Boolean).length;
+  if (audio.size) console.log(`placed ${audio.size} songs by lyrics + audio`);
   console.log(`wrote ${by.size} files to public/songs (${[...by.values()].reduce((n, r) => n + r.length, 0)} songs, ${withPreview} stored previews)`);
 }
 
 const cmd = process.argv[2];
 if (cmd === "prefetch") await prefetch();
 else if (cmd === "shards") shards();
-else console.log("usage: vite-node scripts/songs.ts prefetch|shards");
+else if (cmd === "audio-csv") audioCsv();
+else console.log("usage: vite-node scripts/songs.ts prefetch|shards|audio-csv");
