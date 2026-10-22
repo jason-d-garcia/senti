@@ -218,8 +218,8 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   fill: none; stroke: rgba(160, 175, 220, 0.13); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 3 5;
 }
 .field:not(.is-zoomed) .sections line:not(.axis-line) { stroke: url(#sections-fade); }
-/* Larger than the board so sparkles follow the light out to the screen edge (the stage clips it). */
-.sparkles { position: absolute; left: -100vw; top: -100vh; width: calc(100% + 200vw); height: calc(100% + 200vh); pointer-events: none; }
+/* Sized to the stage from script, so sparkles follow the light out to the screen edge. */
+.sparkles { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 .light-track { position: absolute; inset: 0; pointer-events: none; will-change: transform; }
 .light {
   left: 50%; top: 50%;

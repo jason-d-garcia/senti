@@ -101,11 +101,13 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   const animate = useCallback(() => {
     const c = canvas.current, box = ref.current?.getBoundingClientRect();
     if (!c || !box) { running.current = false; return; }
-    // The canvas spills past the board so sparkles follow the light to the screen edge.
-    const cb = c.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    // The canvas covers the stage (not just the board) so sparkles follow the light to the screen edge, and no
+    // more: every frame clears and redraws all of it, which is what made dragging lag on phones. Capped at 2x.
+    const cb = (surface?.current ?? ref.current!).getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
     if (c.width !== Math.round(cb.width * dpr) || c.height !== Math.round(cb.height * dpr)) {
       c.width = Math.round(cb.width * dpr); c.height = Math.round(cb.height * dpr);
+      Object.assign(c.style, { left: `${cb.left - box.left}px`, top: `${cb.top - box.top}px`, width: `${cb.width}px`, height: `${cb.height}px` });
     }
     const ctx = c.getContext("2d")!;
     // The translation is in device pixels, so it scales with the pixel ratio too.
@@ -128,7 +130,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
     ctx.globalAlpha = 1;
     if (particles.current.length) frame.current = requestAnimationFrame(animate);
     else running.current = false;
-  }, []);
+  }, [surface]);
 
   const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const emit = useCallback((p: Pt, n: number, slow = false) => {
