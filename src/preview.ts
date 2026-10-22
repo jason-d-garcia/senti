@@ -69,7 +69,9 @@ function remember(key: string, p: Preview | null) {
 
 const cache = new Map<string, Promise<Preview | null>>();
 
-export function findPreview(song: { title: string; artist: string }): Promise<Preview | null> {
+export function findPreview(song: { title: string; artist: string; preview?: Preview }): Promise<Preview | null> {
+  // Looked up ahead of time when the catalogue was built: no request needed.
+  if (song.preview) return Promise.resolve(song.preview);
   const key = `${song.title}\u0000${song.artist}`;
   let hit = cache.get(key);
   if (hit) return hit;

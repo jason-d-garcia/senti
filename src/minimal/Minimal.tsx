@@ -1,6 +1,7 @@
-import { memo, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import catalogJson from "../data/catalog.json";
-import { loadHits } from "../catalog";
+import { around, loadSection, SECTIONS } from "../songs";
+import type { CatalogSong } from "../songs";
 import { EMOTIONS, MIXED_EMOJI, emotionAt, placeSong, spotifySearchUrl } from "../mood";
 import type { Mood, PlacedSong, Song } from "../mood";
 import { findPreview, isRateLimited, waitForBudget } from "../preview";
@@ -111,17 +112,29 @@ const TOUCH = typeof window !== "undefined" && window.matchMedia("(pointer: coar
 const REPO = "https://github.com/jason-d-garcia/senti";
 
 export default function Minimal() {
-  const [hits, setHits] = useState<PlacedSong[]>([]);
-  useEffect(() => { loadHits().then(setHits); }, []);
+  // The catalogue arrives one emotion at a time, for the part of the map in view (see ../songs.ts).
+  const [shards, setShards] = useState<Record<string, CatalogSong[]>>({});
+  const need = useCallback((names: string[]) => Promise.all(names.map((n) => loadSection(n).then((list) => {
+    setShards((s) => (s[n] ? s : { ...s, [n]: list }));
+    return list;
+  }).catch(() => [] as CatalogSong[]))).then((lists) => lists.flat()), []);
   const songs = useMemo(() => {
     const seen = new Set<string>();
-    return [...hits, ...testSongs].filter((s) => { const k = songKey(s); if (seen.has(k)) return false; seen.add(k); return true; });
-  }, [hits]);
+    return [...Object.values(shards).flat(), ...testSongs].filter((s) => { const k = songKey(s); if (seen.has(k)) return false; seen.add(k); return true; });
+  }, [shards]);
+  /** Every song in one section, downloading that section first if it isn't here yet. */
+  const songsIn = async (sec: string): Promise<CatalogSong[]> => {
+    const list = await need([sec]);
+    const seen = new Set(list.map(songKey));
+    return [...list, ...testSongs.filter((s) => sectionOf(s) === sec && !seen.has(songKey(s)))];
+  };
 
   const [dot, setDot] = useState<Pt>({ valence: 0.55, arousal: 0.45 });
   const emotion = emotionAt(dot.valence, dot.arousal);
   const color = COLOR[emotion?.mood ?? "mixed"];
   const section = sectionOf(dot);
+  // Keep the light's section and its neighbours loaded, so songs are ready wherever it moves next.
+  useEffect(() => { void need(around(section)); }, [section, need]);
 
   const [pick, setPick] = useState<Pick | null>(null);
   const [finding, setFinding] = useState(false);
@@ -132,6 +145,8 @@ export default function Minimal() {
   const [placePinned, setPlacePinned] = useState(false);
   /** Zoomed-in view: where it's centred, which emotion's songs get covers, and the zoom (fixed once opened). */
   const [discover, setDiscover] = useState<{ center: Pt; section: string; near: string | null; scale: number } | null>(null);
+  // Zoomed in, the view can reach into the sections either side: load those too.
+  useEffect(() => { if (discover) void need(around(discover.section)); }, [discover?.section, need]); // eslint-disable-line react-hooks/exhaustive-deps
   const [covers, setCovers] = useState<Record<string, string | null>>({});
 
   // Page-wide glow and axes are centred on the board, wherever layout puts it.
@@ -164,15 +179,13 @@ export default function Minimal() {
     setFinding(true); setNotFound(false); setPick(null);
     audio.current?.pause();
     const done = votedSongs();
-    const inSection = songs.filter((s) => sectionOf(s) === section);
+    const inSection = await songsIn(section);
     const fresh = inSection.filter((s) => !done.has(songKey(s)));
     const queue = shuffle(fresh.length ? fresh : inSection);
     for (let i = 0, tries = 0; i < queue.length && tries < TRIES; i++) {
       const s = queue[i];
       // Over iTunes' per-minute limit: wait it out (still "Finding a song…") instead of failing.
-      setWaiting(isRateLimited());
-      await waitForBudget();
-      setWaiting(false);
+      if (!s.preview) { setWaiting(isRateLimited()); await waitForBudget(); setWaiting(false); }
       const p = await findPreview(s);
       if (!p && isRateLimited()) { i--; continue; } // refused, not a miss: retry this song once allowed
       tries++;
@@ -203,10 +216,11 @@ export default function Minimal() {
   const advancing = useRef(false);
   useEffect(() => { if (pick) played.current.add(pick.song.id); }, [pick]);
   /** Nearest unplayed songs in the same emotion, a little shuffled so the radio doesn't always run one way. */
-  const radioQueue = (from: PlacedSong) => {
-    const sec = sectionOf(from), d = (s: PlacedSong) => Math.hypot(s.valence - from.valence, s.arousal - from.arousal);
-    let pool = songs.filter((s) => sectionOf(s) === sec && !played.current.has(s.id));
-    if (!pool.length) { played.current.clear(); played.current.add(from.id); pool = songs.filter((s) => sectionOf(s) === sec && s.id !== from.id); }
+  const radioQueue = async (from: PlacedSong) => {
+    const d = (s: PlacedSong) => Math.hypot(s.valence - from.valence, s.arousal - from.arousal);
+    const all = await songsIn(sectionOf(from));
+    let pool = all.filter((s) => !played.current.has(s.id));
+    if (!pool.length) { played.current.clear(); played.current.add(from.id); pool = all.filter((s) => s.id !== from.id); }
     return shuffle(pool.sort((a, b) => d(a) - d(b)).slice(0, 12));
   };
   const playNext = async () => {
@@ -214,8 +228,8 @@ export default function Minimal() {
     if (!from || advancing.current) return;
     advancing.current = true;
     audio.current?.pause();
-    for (const s of radioQueue(from).slice(0, TRIES)) {
-      await waitForBudget();
+    for (const s of (await radioQueue(from)).slice(0, TRIES)) {
+      if (!s.preview) await waitForBudget();
       const p = await findPreview(s);
       if (!p) continue;
       setPick({ song: s, preview: p, step: "listen" }); setProgress(0);
@@ -294,14 +308,17 @@ export default function Minimal() {
   const opened = useRef(false);
   useEffect(() => {
     const key = sharedSongKey();
-    if (opened.current || !key || !hits.length) return;
+    if (opened.current || !key) return;
     opened.current = true;
-    const s = songs.find((x) => songKey(x) === key);
-    if (!s) return;
-    setDot({ valence: s.valence, arousal: s.arousal });
-    setPinned(true);
-    findPreview(s).then((p) => { if (p) { setPick({ song: s, preview: p, step: "listen" }); setProgress(0); } });
-  }, [hits, songs]);
+    // The link doesn't say which section the song is in, so look through all of them (small files, cached after).
+    void need(SECTIONS).then((all) => {
+      const s = [...all, ...testSongs].find((x) => songKey(x) === key);
+      if (!s) return;
+      setDot({ valence: s.valence, arousal: s.arousal });
+      setPinned(true);
+      findPreview(s).then((p) => { if (p) { setPick({ song: s, preview: p, step: "listen" }); setProgress(0); } });
+    });
+  }, [need]);
 
   const placing = pick?.step === "place";
 
@@ -353,7 +370,7 @@ export default function Minimal() {
     (async () => {
       for (const s of todo) {
         // Covers leave a few lookups a minute free, so pressing play never hits the limit.
-        if (!(await waitForBudget(6, () => cancelled))) return;
+        if (!(s as CatalogSong).preview && !(await waitForBudget(6, () => cancelled))) return;
         const p = await findPreview(s);
         if (!p && isRateLimited()) continue;
         if (cancelled) return;
