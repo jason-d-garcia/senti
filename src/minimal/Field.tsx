@@ -308,7 +308,24 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
             <stop offset="0" stopColor="rgb(160, 175, 220)" stopOpacity="0.13" />
             <stop offset="1" stopColor="rgb(160, 175, 220)" stopOpacity="0" />
           </linearGradient>
+          {/* The lit section brightens from just outside the centre circle and fades out towards the edges. */}
+          <radialGradient id="section-lit-fade" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1.5">
+            <stop offset={MIXED_RADIUS / 1.5} stopColor="#fff" stopOpacity="0" />
+            <stop offset="0.25" stopColor="#fff" stopOpacity="1" />
+            <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          </radialGradient>
+          <mask id="section-lit-mask" maskUnits="userSpaceOnUse" x="-12" y="-12" width="24" height="24">
+            <rect x="-12" y="-12" width="24" height="24" fill="url(#section-lit-fade)" />
+          </mask>
         </defs>
+        {!zoom && (
+          <g mask="url(#section-lit-mask)">
+            {EMOTIONS.map((e) => (
+              <path key={e.name} className={`section-lit${active === e ? " is-active" : ""}`} fill={color}
+                d={`M0 0L${RAY * Math.cos(rad(e.from))} ${-RAY * Math.sin(rad(e.from))}L${RAY * Math.cos(rad(e.to))} ${-RAY * Math.sin(rad(e.to))}Z`} />
+            ))}
+          </g>
+        )}
         <g className="sections-g" style={{ transform: zoom ? `scale(${k}) translate(${-zc.valence}px, ${zc.arousal}px)` : "none" }}>
           {EMOTIONS.map((e) => (
             // Quadrant boundaries are the axes: drawn by the page outside the zoom, here only when zoomed in.

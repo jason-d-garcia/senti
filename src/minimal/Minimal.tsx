@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import catalogJson from "../data/catalog.json";
 import { loadHits } from "../catalog";
 import { EMOTIONS, MIXED_EMOJI, emotionAt, placeSong, spotifySearchUrl } from "../mood";
@@ -22,7 +22,7 @@ const PREVIEW_VOLUME = 0.4;
 const MIN_ZOOM = 3, MAX_ZOOM = 40;
 const FEATURED = 14;
 const COVER_PX = 46;
-const OTHERS = 160;
+const OTHERS = 260;
 /** Songs tried before giving up on finding one with a preview. */
 const TRIES = 6;
 
@@ -48,14 +48,16 @@ const Feeling = memo(function Feeling({ idx }: { idx: number }) {
   // Continuous wheel position: move to the nearest copy of the new emotion so the wheel takes the short way round.
   const [pos, setPos] = useState(idx + WHEEL.length * Math.floor(COPIES / 2));
   const [animate, setAnimate] = useState(true);
-  // Neighbouring entries show only while the wheel is turning.
+  // Neighbouring entries show only while the wheel is turning, then fade out (kept rendered until they have).
   const [turning, setTurning] = useState(false);
+  const [fading, setFading] = useState(false);
   const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
-    setTurning(true);
+    setTurning(true); setFading(true);
     const t = setTimeout(() => setTurning(false), 650);
-    return () => clearTimeout(t);
+    const f = setTimeout(() => setFading(false), 650 + 500);
+    return () => { clearTimeout(t); clearTimeout(f); };
   }, [idx]);
   useEffect(() => {
     setPos((cur) => {
@@ -84,7 +86,7 @@ const Feeling = memo(function Feeling({ idx }: { idx: number }) {
             const d = i - pos;
             // Only the current entry is real text; neighbours exist only while the wheel turns, so the
             // heading reads "I'm feeling elated" to screen readers and search engines.
-            if (d !== 0 && (!turning || Math.abs(d) > 2)) return <span key={i} className="wheel-item" aria-hidden="true" />;
+            if (d !== 0 && (!fading || Math.abs(d) > 2)) return <span key={i} className="wheel-item" aria-hidden="true" />;
             return (
               <span key={i} className="wheel-item" aria-hidden={d !== 0 ? true : undefined} style={{
                 color: w.color,
@@ -305,15 +307,15 @@ export default function Minimal() {
 
   // Discover: zoom in around the song, far enough that its nearest neighbours in the same emotion spread
   // across the view (songs cluster tightly), and show what else is nearby.
-  const view = useMemo(() => {
+  // The centre while a drag is in progress, so the page glow and the small dots move with the map.
+  const [livePan, setLivePan] = useState<Pt | null>(null);
+  const panAt = useDeferredValue(livePan);
+  const featuredView = useMemo(() => {
     if (!discover) return null;
     const { center } = discover;
     const d = (s: PlacedSong) => Math.hypot(s.valence - center.valence, s.arousal - center.arousal);
     const featured = songs.filter((s) => sectionOf(s) === discover.section).sort((a, b) => d(a) - d(b)).slice(0, FEATURED);
     const { scale } = discover;
-    const ids = new Set(featured.map((s) => s.id));
-    const others = songs.filter((s) => !ids.has(s.id) && Math.abs(s.valence - center.valence) < 1.1 / scale
-      && Math.abs(s.arousal - center.arousal) < 1.1 / scale).sort((a, b) => d(a) - d(b)).slice(0, OTHERS);
     // Nudge covers apart so they don't stack (display positions only; true positions are kept for votes).
     const gap = (COVER_PX + 6) / (boardHalf * scale);
     const at = featured.map((s) => ({ v: s.valence, a: s.arousal }));
@@ -325,18 +327,29 @@ export default function Minimal() {
         at[i].v -= ux * push; at[i].a -= uy * push; at[j].v += ux * push; at[j].a += uy * push;
       }
     }
+    return { scale, featured: featured.map((s, i) => ({ song: s, featured: true, v: at[i].v, a: at[i].a })) };
+  }, [discover, songs, boardHalf]);
+  // The small dots follow the drag as it happens, from a window a little wider than the view so the edges are
+  // already filled in; covers wait for the drag to end.
+  const view = useMemo(() => {
+    if (!discover || !featuredView) return null;
+    const { scale } = featuredView, center = panAt ?? discover.center, reach = 1.6 / scale;
+    const ids = new Set(featuredView.featured.map((f) => f.song.id));
+    const d = (s: PlacedSong) => Math.hypot(s.valence - center.valence, s.arousal - center.arousal);
+    const others = songs.filter((s) => !ids.has(s.id) && Math.abs(s.valence - center.valence) < reach
+      && Math.abs(s.arousal - center.arousal) < reach).sort((a, b) => d(a) - d(b)).slice(0, OTHERS);
     return { scale, items: [
       ...others.map((s) => ({ song: s, featured: false, v: s.valence, a: s.arousal })),
-      ...featured.map((s, i) => ({ song: s, featured: true, v: at[i].v, a: at[i].a })),
+      ...featuredView.featured,
     ] };
-  }, [discover, songs, boardHalf]);
+  }, [discover, featuredView, panAt, songs]);
   const nearby = view?.items ?? [];
 
   // Fetch covers for the featured songs a few at a time (the iTunes search allows about 20 lookups a minute).
   useEffect(() => {
     if (!discover) return;
     let cancelled = false;
-    const todo = nearby.filter((n) => n.featured && !(n.song.id in covers)).map((n) => n.song);
+    const todo = (featuredView?.featured ?? []).filter((n) => !(n.song.id in covers)).map((n) => n.song);
     (async () => {
       for (const s of todo) {
         // Covers leave a few lookups a minute free, so pressing play never hits the limit.
@@ -349,11 +362,12 @@ export default function Minimal() {
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [discover, nearby]);
+  }, [discover, featuredView]);
 
   const fieldSongs: FieldSong[] = nearby.map(({ song, featured, v, a }) => ({
     id: song.id, valence: v, arousal: a, title: `${song.title} · ${song.artist}`, featured,
-    color: COLOR[emotionAt(song.valence, song.arousal)?.mood ?? "mixed"], artwork: covers[song.id] ?? undefined,
+    color: COLOR[emotionAt(song.valence, song.arousal)?.mood ?? "mixed"], // Covers are tiny on the map, so ask for a small image (the card uses the large one).
+    artwork: covers[song.id]?.replace(/\d+x\d+bb/, "120x120bb") ?? undefined,
   }));
 
   const openDiscover = () => {
@@ -370,8 +384,6 @@ export default function Minimal() {
   const closeDiscover = () => setDiscover(null);
   // Dragging the zoomed map recentres it; covers follow whichever emotion is now in the middle.
   const panTo = (center: Pt) => setDiscover((d) => d && { ...d, center, section: sectionOf(center), near: null });
-  // The centre while a drag is in progress, so the page glow moves with the map.
-  const [livePan, setLivePan] = useState<Pt | null>(null);
   // Escape closes the song card first, then the zoomed view.
   const escape = useRef(() => {});
   escape.current = () => { if (pick && !placing) close(); else if (discover) closeDiscover(); };

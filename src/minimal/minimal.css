@@ -125,6 +125,9 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .field.is-zoomed .sections line.axis-line { opacity: 1; stroke: rgba(200, 210, 240, 0.55); stroke-width: 1.4; }
 /* Dash lengths scale with the zoom, so section lines go solid (and fainter) when zoomed in. */
 .field.is-zoomed .sections { opacity: 0.5; }
+/* The section under the light glows a little brighter. */
+.section-lit { opacity: 0; transition: opacity 250ms ease, fill 250ms ease; }
+.section-lit.is-active { opacity: 0.16; }
 .field.is-zoomed .sections line, .field.is-zoomed .sections ellipse { stroke-dasharray: none; }
 .sections-g { transform-origin: 0 0; transition: transform 750ms cubic-bezier(0.65, 0, 0.25, 1); }
 .field.is-panning .sections-g { transition: none; }
@@ -134,7 +137,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; padding: 0; border: 0; border-radius: 50%;
   background: var(--c); opacity: 0.55; cursor: pointer;
   scale: calc(1 / var(--k)); transition: scale 750ms cubic-bezier(0.65, 0, 0.25, 1), transform 200ms ease, opacity 300ms ease;
-  animation: dot-in 600ms 300ms both ease;
+  animation: dot-in 350ms 120ms both ease;
 }
 .song-dot.is-featured {
   width: 46px; height: 46px; margin: -23px 0 0 -23px; opacity: 1; overflow: hidden;
@@ -261,7 +264,7 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .wheel-item {
   display: flex; align-items: center; height: 1.35em; flex: none;
   font-weight: 800; white-space: nowrap; transform-origin: left center;
-  transition: opacity 320ms ease, transform 320ms ease;
+  transition: opacity 450ms ease, transform 320ms ease;
 }
 .wheel-emoji { font-size: 0.85em; margin-right: 0.4em; }
 
@@ -388,17 +391,17 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   .brand { font-size: 1.5rem; }
   .banner nav { gap: 14px; overflow: visible; }
   .axis-end { font-size: 0.82rem; letter-spacing: 0.02em; }
-  /* Phones: names as large as the width allows; the side axis titles sit lower, between the names
-     just below the axis (Sad, Contented) and the next ring out. */
+  /* Phones: names as large as the width allows. */
   .emotion-label { --grow: 1.4; font-size: 0.8rem; letter-spacing: 0; }
-  .end-right, .end-left { top: calc(var(--cy, 50%) + 48px); }
+  /* Phones: the side axis titles sit just above the axis, clear of the names below it. */
+  .end-right, .end-left { top: calc(var(--cy, 50%) - 5px); transform: translateY(-100%); }
   .end-right { right: 6px; }
   .end-left { left: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .card, .ask, .thumb span, .song-dot, .discover-bar, .toast { animation: none !important; }
   .wheel-track, .wheel-item, .find, .dock, .dock-more, .light, .song-dot,
-  .zoom-layer, .sections-g, .page-glow, .page-axes, .emotion-label { transition: none !important; }
+  .zoom-layer, .sections-g, .page-glow, .page-axes, .emotion-label, .section-lit { transition: none !important; }
 }
 
 /* Vibe tags */
