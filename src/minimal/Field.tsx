@@ -156,7 +156,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   const moveNow = (p: Pt) => {
     if (!placing && light.current) {
       const { x, y } = pct(p);
-      light.current.style.left = `${x}%`; light.current.style.top = `${y}%`;
+      light.current.style.transform = `translate(${x - 50}%, ${y - 50}%)`;
       live.current.dot = p;
       emit(p, 2);
     }
@@ -308,24 +308,18 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
             <stop offset="0" stopColor="rgb(160, 175, 220)" stopOpacity="0.13" />
             <stop offset="1" stopColor="rgb(160, 175, 220)" stopOpacity="0" />
           </linearGradient>
-          {/* The lit section brightens from just outside the centre circle and fades out towards the edges. */}
+          {/* The lit section brightens from just outside the centre circle and fades out towards the edges.
+              A gradient fill rather than a mask: masks are slow to repaint on phones. */}
           <radialGradient id="section-lit-fade" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1.5">
-            <stop offset={MIXED_RADIUS / 1.5} stopColor="#fff" stopOpacity="0" />
-            <stop offset="0.25" stopColor="#fff" stopOpacity="1" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0" />
+            <stop offset={MIXED_RADIUS / 1.5} stopColor={color} stopOpacity="0" />
+            <stop offset="0.25" stopColor={color} stopOpacity="1" />
+            <stop offset="1" stopColor={color} stopOpacity="0" />
           </radialGradient>
-          <mask id="section-lit-mask" maskUnits="userSpaceOnUse" x="-12" y="-12" width="24" height="24">
-            <rect x="-12" y="-12" width="24" height="24" fill="url(#section-lit-fade)" />
-          </mask>
         </defs>
-        {!zoom && (
-          <g mask="url(#section-lit-mask)">
-            {EMOTIONS.map((e) => (
-              <path key={e.name} className={`section-lit${active === e ? " is-active" : ""}`} fill={color}
-                d={`M0 0L${RAY * Math.cos(rad(e.from))} ${-RAY * Math.sin(rad(e.from))}L${RAY * Math.cos(rad(e.to))} ${-RAY * Math.sin(rad(e.to))}Z`} />
-            ))}
-          </g>
-        )}
+        {!zoom && EMOTIONS.map((e) => (
+          <path key={e.name} className={`section-lit${active === e ? " is-active" : ""}`} fill="url(#section-lit-fade)"
+            d={`M0 0L${RAY * Math.cos(rad(e.from))} ${-RAY * Math.sin(rad(e.from))}L${RAY * Math.cos(rad(e.to))} ${-RAY * Math.sin(rad(e.to))}Z`} />
+        ))}
         <g className="sections-g" style={{ transform: zoom ? `scale(${k}) translate(${-zc.valence}px, ${zc.arousal}px)` : "none" }}>
           {EMOTIONS.map((e) => (
             // Quadrant boundaries are the axes: drawn by the page outside the zoom, here only when zoomed in.
@@ -371,12 +365,13 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
           </button>
         ))}
 
-        <span
-          ref={light}
-          className={`light${placing ? " is-dim" : ""}${!pinned && !placing ? " is-selected" : ""}${overLight ? " is-hover" : ""}`}
-          style={{ ...pos(dot), "--glow": color } as React.CSSProperties}
-          aria-hidden="true"
-        />
+        {/* The light rides on a board-sized layer that is only ever translated, so moving it never repaints the map. */}
+        <span ref={light} className="light-track" style={{ transform: `translate(${pct(dot).x - 50}%, ${pct(dot).y - 50}%)` }} aria-hidden="true">
+          <span
+            className={`light${placing ? " is-dim" : ""}${!pinned && !placing ? " is-selected" : ""}${overLight ? " is-hover" : ""}`}
+            style={{ "--glow": color } as React.CSSProperties}
+          />
+        </span>
         {ghost && !overLight && <span className="ghost-ring" style={pos(ghost)} aria-hidden="true" />}
         {placing && (
           <span className="song-pin" style={pos(placing.at)} aria-hidden="true">
