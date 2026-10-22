@@ -5,7 +5,6 @@ import type { CatalogSong } from "../songs";
 import { EMOTIONS, MIXED_EMOJI, emotionAt, placeSong, spotifySearchUrl } from "../mood";
 import type { Mood, PlacedSong, Song } from "../mood";
 import { findPreview, isRateLimited, waitForBudget } from "../preview";
-import { loadTile, storedCover, tilesAround } from "../covers";
 import type { Preview } from "../preview";
 import { sendVote, songKey, votedSongs } from "../feedback";
 import { Field } from "./Field";
@@ -361,26 +360,15 @@ export default function Minimal() {
       ...featuredView.featured,
     ] };
   }, [discover, featuredView, panAt, songs]);
-  // Start downloading the cover tiles around the view (and a little beyond) before they're needed.
-  useEffect(() => {
-    if (!discover || !featuredView) return;
-    const c = panAt ?? discover.center;
-    tilesAround(c.valence, c.arousal, 1.6 / featuredView.scale).forEach((t) => void loadTile(t));
-  }, [discover, featuredView, panAt]);
   const nearby = view?.items ?? [];
 
-  // Covers come from the pre-fetched tiles around where you're looking; songs not in a tile yet are looked up
-  // a few at a time (the iTunes search allows about 20 lookups a minute).
+  // Fetch covers for the featured songs a few at a time (the iTunes search allows about 20 lookups a minute).
   useEffect(() => {
     if (!discover) return;
     let cancelled = false;
     const todo = (featuredView?.featured ?? []).filter((n) => !(n.song.id in covers)).map((n) => n.song);
     (async () => {
-      const stored = await Promise.all(todo.map(storedCover));
-      if (cancelled) return;
-      const found = Object.fromEntries(todo.flatMap((s, i) => (stored[i] === undefined ? [] : [[s.id, stored[i] || null]])));
-      if (Object.keys(found).length) setCovers((c) => ({ ...c, ...found }));
-      for (const s of todo.filter((_, i) => stored[i] === undefined)) {
+      for (const s of todo) {
         // Covers leave a few lookups a minute free, so pressing play never hits the limit.
         if (!(s as CatalogSong).preview && !(await waitForBudget(6, () => cancelled))) return;
         const p = await findPreview(s);
