@@ -66,8 +66,10 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 .page-glow {
   position: absolute; inset: 0; pointer-events: none;
   background: conic-gradient(from 0deg at var(--cx, 50%) var(--cy, 50%),
-    #f6b93b 0deg, #f6b93b 30deg, #31c9a3 120deg, #31c9a3 150deg,
-    #5b8cff 210deg, #5b8cff 240deg, #f0604d 300deg, #f0604d 330deg, #f6b93b 360deg);
+    /* Each colour is centred on its quarter of the map and blends into the next right on the axes, so the glow
+       lines up with the grid on any board shape (the axes stay at 0/90/180/270 even on the taller phone map). */
+    color-mix(in srgb, #f0604d, #f6b93b) 0deg, #f6b93b 20deg, #f6b93b 70deg, #31c9a3 110deg, #31c9a3 160deg,
+    #5b8cff 200deg, #5b8cff 250deg, #f0604d 290deg, #f0604d 340deg, color-mix(in srgb, #f0604d, #f6b93b) 360deg);
   /* Zooms with the map (same timing as .zoom-layer), so zoomed in, the region is lit from the
      direction of the map's centre. --zv/--za is the zoom centre in grid units, --zk the zoom. */
   transform-origin: calc(var(--cx, 50%) + var(--zv, 0) * var(--bh, 40vh)) calc(var(--cy, 50%) - var(--za, 0) * var(--bh, 40vh));
