@@ -377,8 +377,9 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 @media (max-aspect-ratio: 4/5) {
   /* Map and panel centred together on tall phones; the bottom padding is the panel's space. */
   .stage { align-items: center; padding: 12px 4px 190px; }
-  /* A taller map on phones uses the spare height, giving the emotion names room to breathe. */
-  .board { width: min(100%, calc((100dvh - 44px - 214px) * 0.8)); aspect-ratio: 4 / 5; }
+  /* The map stays a true circle on phones too (the names run along their sections, so they fit without the
+     taller board), and the glow, the centre circle and the section lines all line up. */
+  .board { width: min(100%, calc(100dvh - 52px - 214px)); aspect-ratio: 1; }
   .dock { width: 100%; padding: 12px 0; }
   .stage.is-discovering .dock { transform: translateX(-50%) translateY(12px); }
   .card { position: fixed; top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); translate: -50% 0; padding: 18px; }
