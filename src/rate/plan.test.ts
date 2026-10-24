@@ -19,6 +19,13 @@ describe("study plan", () => {
       }
     }
   });
+  it("spreads the repeats out, never two within a few songs of each other", () => {
+    for (let k = 0; k < 200; k++) {
+      const at = makePlan(ids).flatMap((t, i) => (t.repeat ? [i] : []));
+      expect(at).toHaveLength(REPEATS);
+      for (let i = 1; i < at.length; i++) expect(at[i] - at[i - 1]).toBeGreaterThanOrEqual(3);
+    }
+  });
   it("makes rater codes the API accepts", () => {
     expect(newRaterCode()).toMatch(/^[a-z0-9]{6,16}$/);
   });

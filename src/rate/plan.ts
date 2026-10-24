@@ -17,13 +17,23 @@ export function shuffle<T>(xs: T[], rand: () => number = Math.random): T[] {
 }
 
 export function makePlan(ids: string[], rand: () => number = Math.random): Trial[] {
-  const order: Trial[] = shuffle(ids, rand).map((id) => ({ id, repeat: false }));
-  // Repeat songs from the first half, each placed somewhere after the first time plus the gap.
-  for (const id of shuffle(order.slice(0, Math.floor(order.length / 2)).map((t) => t.id), rand).slice(0, REPEATS)) {
-    const first = order.findIndex((t) => t.id === id);
-    const from = first + REPEAT_GAP + 1;
-    order.splice(from + Math.floor(rand() * (order.length + 1 - from)), 0, { id, repeat: true });
+  const base = shuffle(ids, rand);
+  const n = base.length;
+  // The repeats go in the second half, one in each of REPEATS equal stretches, so they're spread out and never
+  // back to back. Each repeats a song heard at least REPEAT_GAP songs before its slot.
+  const span = Math.floor(n / 2) / REPEATS;
+  const used = new Set<string>();
+  const slots: { at: number; id: string }[] = [];
+  for (let k = 0; k < REPEATS; k++) {
+    const at = Math.floor(n / 2 + k * span + rand() * Math.max(1, span - 2));
+    const pool = base.slice(0, Math.max(0, at - REPEAT_GAP)).filter((id) => !used.has(id));
+    if (!pool.length) continue;
+    const id = pool[Math.floor(rand() * pool.length)];
+    used.add(id);
+    slots.push({ at, id });
   }
+  const order: Trial[] = base.map((id) => ({ id, repeat: false }));
+  for (const { at, id } of slots.sort((x, y) => y.at - x.at)) order.splice(at, 0, { id, repeat: true });
   return order;
 }
 
