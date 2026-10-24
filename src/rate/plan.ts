@@ -1,6 +1,6 @@
 /** The order one rater hears the study songs in: all of them shuffled, plus a few hidden repeats. */
 
-export interface StudySong { id: string; title: string; artist: string; half: number; v: number; a: number; preview?: [string, string, string] }
+export interface StudySong { id: string; title: string; artist: string; half: number; v: number; a: number; preview?: [string, string, string]; instrumental?: boolean }
 export interface Trial { id: string; repeat: boolean }
 
 export const REPEATS = 4;
@@ -16,7 +16,8 @@ export function shuffle<T>(xs: T[], rand: () => number = Math.random): T[] {
   return out;
 }
 
-export function makePlan(ids: string[], rand: () => number = Math.random): Trial[] {
+/** `noRepeat`: songs never used as a hidden repeat (instrumentals, so the repeats test songs with lyrics). */
+export function makePlan(ids: string[], rand: () => number = Math.random, noRepeat: Set<string> = new Set()): Trial[] {
   const base = shuffle(ids, rand);
   const n = base.length;
   // The repeats go in the second half, one in each of REPEATS equal stretches, so they're spread out and never
@@ -26,7 +27,7 @@ export function makePlan(ids: string[], rand: () => number = Math.random): Trial
   const slots: { at: number; id: string }[] = [];
   for (let k = 0; k < REPEATS; k++) {
     const at = Math.floor(n / 2 + k * span + rand() * Math.max(1, span - 2));
-    const pool = base.slice(0, Math.max(0, at - REPEAT_GAP)).filter((id) => !used.has(id));
+    const pool = base.slice(0, Math.max(0, at - REPEAT_GAP)).filter((id) => !used.has(id) && !noRepeat.has(id));
     if (!pool.length) continue;
     const id = pool[Math.floor(rand() * pool.length)];
     used.add(id);

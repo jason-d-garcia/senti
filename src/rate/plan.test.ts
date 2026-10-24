@@ -26,6 +26,10 @@ describe("study plan", () => {
       for (let i = 1; i < at.length; i++) expect(at[i] - at[i - 1]).toBeGreaterThanOrEqual(3);
     }
   });
+  it("never repeats a song it's told to leave out", () => {
+    const skip = new Set(ids.slice(0, 40));
+    for (let k = 0; k < 100; k++) for (const t of makePlan(ids, Math.random, skip)) if (t.repeat) expect(skip.has(t.id)).toBe(false);
+  });
   it("makes rater codes the API accepts", () => {
     expect(newRaterCode()).toMatch(/^[a-z0-9]{6,16}$/);
   });

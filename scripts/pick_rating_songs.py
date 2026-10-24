@@ -11,6 +11,8 @@ title, artist, half, the model's placement, and the stored preview when there is
 import glob, json, math
 
 CELL, N = 0.105, 100
+# Known instrumentals: marked so they are never used as a hidden repeat (repeats should test songs with lyrics).
+INSTRUMENTALS = {"San Antonio Rose|Floyd Cramer", "Tuff|Ace Cannon", "Wonderland by Night|Bert Kaempfert"}
 rows = [r for f in sorted(glob.glob("public/songs/*.json")) for r in json.load(open(f))["songs"]]
 cells = {}
 for r in rows:
@@ -28,6 +30,8 @@ for n, (i, j) in enumerate(snake):
     s = {"id": f"{best[1]}|{best[2]}", "title": best[1], "artist": best[2], "half": n % 2, "v": best[3], "a": best[4]}
     if len(best) > 7 and best[7]:
         s["preview"] = best[7]
+    if s["id"] in INSTRUMENTALS:
+        s["instrumental"] = True
     picked.append(s)
 
 json.dump({"cell": CELL, "songs": picked}, open("public/rate/songs.json", "w"), ensure_ascii=False, indent=0)

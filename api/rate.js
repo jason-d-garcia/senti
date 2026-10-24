@@ -75,6 +75,7 @@ export async function POST(request) {
   if (!URL || !TOKEN) return json({ error: "no database" }, 503);
   let b;
   try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+  if (typeof b?.feedback === "string") return feedback(request, b.feedback);
   if (typeof b?.reserve === "string") {
     // Starting: hold a paid spot if one is free.
     if (!/^[a-z0-9]{6,16}$/.test(b.reserve)) return json({ error: "bad code" }, 400);
@@ -127,5 +128,27 @@ export async function POST(request) {
   };
   await redis([["RPUSH", "rate:log", JSON.stringify(row)], ["INCR", `rate:count:${b.rater}`],
     ["ZADD", "rate:hold", "XX", Date.now() + HOLD_MS, b.rater]]);
+  return json({ ok: true });
+}
+
+// End-of-study feedback: anonymous (no rater code), kept in the list rate:feedback (readable in the Upstash data browser),
+// and emailed too when RESEND_API_KEY and FEEDBACK_TO are set in Vercel (sent from study@playsenti.com via Resend).
+async function feedback(request, text) {
+  text = text.trim().slice(0, 2000);
+  if (!text) return json({ error: "empty" }, 400);
+  const ip = (request.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
+  const [n] = await redis([["INCR", `rate:fbrl:${ip}`], ["EXPIRE", `rate:fbrl:${ip}`, 3600]]);
+  if (n > 5) return json({ error: "slow down" }, 429);
+  await redis([["LPUSH", "rate:feedback", JSON.stringify({ text, t: Date.now() })]]);
+  if (process.env.RESEND_API_KEY && process.env.FEEDBACK_TO) {
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" },
+        body: JSON.stringify({ from: "senti study <study@playsenti.com>", to: process.env.FEEDBACK_TO,
+          subject: "Listening study feedback", text }),
+      });
+    } catch { /* it's saved either way */ }
+  }
   return json({ ok: true });
 }

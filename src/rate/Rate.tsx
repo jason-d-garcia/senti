@@ -126,7 +126,7 @@ export function Rate() {
       const r = await fetch("/api/rate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reserve: rater }) });
       heldSpot = !!(await r.json()).reserved;
     } catch { /* offline: they can still be paid at the end if a spot is free */ }
-    const p: Progress = { rater, half, plan: makePlan(ids), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false, heldSpot };
+    const p: Progress = { rater, half, plan: makePlan(ids, Math.random, new Set([...songs.values()].filter((s) => s.instrumental).map((s) => s.id))), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false, heldSpot };
     save(p); setProgress(p);
   };
 
@@ -214,6 +214,7 @@ export function Rate() {
           <p className="note">Couldn't get your payment code{payError === "claimed" ? " (one was already given out for this run)" : ""}.
             {payError === "failed" ? " Refresh to try again, or e" : " E"}mail <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your answer code below.</p>
         ) : <p className="note">Getting your payment code…</p>}
+        <Feedback />
         <p className="dim">Your answer code is <b className="code">{progress.rater}</b>. Keep it if you might want your answers
           deleted, or have a question: email <a href="mailto:study@playsenti.com">study@playsenti.com</a>.</p>
       </main>
@@ -252,6 +253,30 @@ export function Rate() {
     );
   }
   return <TrialView key={progress.done} n={progress.done} total={progress.plan.length} song={song} code={progress.rater} onAnswer={answer} />;
+}
+
+/** Optional, anonymous note at the end: sent without the rater code. */
+function Feedback() {
+  const [text, setText] = useState("");
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+  const send = async () => {
+    setState("sending");
+    try {
+      const r = await fetch("/api/rate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ feedback: text }) });
+      setState(r.ok ? "sent" : "failed");
+    } catch { setState("failed"); }
+  };
+  if (state === "sent") return <p className="note">Thanks for the feedback!</p>;
+  return (
+    <div className="feedback">
+      <label htmlFor="fb">Anything we could improve? (optional, anonymous)</label>
+      <textarea id="fb" rows={3} maxLength={2000} value={text} onChange={(e) => setText(e.target.value)}
+        placeholder="Confusing songs, the grid, the instructions, how long it took…" />
+      <button type="button" className="primary" onClick={send} disabled={!text.trim() || state === "sending"}>
+        {state === "sending" ? "Sending…" : "Send feedback"}</button>
+      {state === "failed" && <p className="note">Couldn't send. Try again, or email study@playsenti.com.</p>}
+    </div>
+  );
 }
 
 function TrialView({ n, total, song, practice = false, code, onAnswer }: {

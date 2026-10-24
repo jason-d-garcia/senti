@@ -351,7 +351,8 @@
 "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/be/bb/3e/bebb3edb-b117-5ae2-adba-19bb49ab6593/mzaf_328613191330173300.plus.aac.p.m4a",
 "https://music.apple.com/us/album/san-antonio-rose/1092331039?i=1092331488&uo=4",
 "https://is1-ssl.mzstatic.com/image/thumb/Music69/v4/8a/9a/86/8a9a860e-f587-ec95-514e-e573093e2767/886445395938.jpg/600x600bb.jpg"
-]
+],
+"instrumental": true
 },
 {
 "id": "Sealed with a Kiss|Brian Hyland",
@@ -377,7 +378,8 @@
 "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/e7/41/f1/e741f147-1c12-a5f3-e086-c7f8123041da/mzaf_14127550673655265679.plus.aac.p.m4a",
 "https://music.apple.com/us/album/tuff/257139851?i=257139865&uo=4",
 "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/19/cc/84/19cc84e7-320f-aca7-bd35-0008d888aa57/715187787827.png/600x600bb.jpg"
-]
+],
+"instrumental": true
 },
 {
 "id": "Judy's Turn to Cry|Lesley Gore",
@@ -966,7 +968,8 @@
 "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/bb/ad/16/bbad165c-8a7f-5e7c-2012-6c5882c8f7a6/mzaf_172911780853053732.plus.aac.p.m4a",
 "https://music.apple.com/us/album/wonderland-by-night-remastered/420995641?i=420995655&uo=4",
 "https://is1-ssl.mzstatic.com/image/thumb/Music/3e/ed/75/mzi.ricwepaf.jpg/600x600bb.jpg"
-]
+],
+"instrumental": true
 },
 {
 "id": "Travelin' Man|Ricky Nelson",

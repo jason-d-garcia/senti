@@ -22,6 +22,12 @@ button { font: inherit; }
 .note { color: var(--dim); }
 .known { display: flex; gap: 10px; align-items: center; min-height: 44px; color: var(--dim); cursor: pointer; }
 .known input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
+.feedback { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 12px; }
+.feedback label { font-size: 0.95rem; }
+.feedback textarea { font: inherit; font-size: 16px; color: var(--ink); background: rgba(160, 175, 220, 0.07); border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px 14px; resize: vertical; }
+.feedback textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.feedback .primary { margin-top: 0; }
 .code { font-family: ui-monospace, monospace; color: var(--accent); letter-spacing: 0.06em; }
 
 .primary {
