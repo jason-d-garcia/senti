@@ -32,12 +32,14 @@ const csvCell = (x) => (typeof x === "string" && /[",\n]/.test(x) ? `"${x.replac
 // only people who stop answering for that long lose it.
 // 10 paid places, plus the one payment code already given to Josh's first run before it was marked unpaid.
 const PAID_SPOTS = Number(process.env.STUDY_PAID_SPOTS ?? 11);
-// Test runs that are saved like any other but never take a paid spot (Josh's first run and Jason's test, on the first
-// song list).
-const UNPAID = new Set(["4md8cce7", "37753gx8", ...(process.env.STUDY_UNPAID ?? "").split(",").filter(Boolean)]);
+// Test runs that are saved like any other but never take a paid spot (Josh's first run and Jason's tests).
+const UNPAID = new Set(["4md8cce7", "37753gx8", "ns7s3j48", ...(process.env.STUDY_UNPAID ?? "").split(",").filter(Boolean)]);
 const HOLD_MS = 3 * 60 * 60 * 1000;
 async function spots() {
   const now = Date.now();
+  // One-off: the holds open on 24 Oct 2026 were all Jason's test sessions; clear them once.
+  const [first] = await redis([["SET", "rate:cleared-test-holds-1", "1", "NX"]]);
+  if (first === "OK") await redis([["DEL", "rate:hold"]]);
   const [, , held, open, paid] = await redis([["ZREMRANGEBYSCORE", "rate:hold", 0, now], ["ZREM", "rate:hold", ...UNPAID], ["ZCARD", "rate:hold"],
     ["SCARD", "rate:pay:open"], ["SCARD", "rate:pay:paid"]]);
   const issued = Number(open) + Number(paid);
