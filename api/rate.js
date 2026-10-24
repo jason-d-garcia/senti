@@ -148,15 +148,18 @@ async function feedback(request, text) {
   const [n] = await redis([["INCR", `rate:fbrl:${ip}`], ["EXPIRE", `rate:fbrl:${ip}`, 3600]]);
   if (n > 5) return json({ error: "slow down" }, 429);
   await redis([["LPUSH", "rate:feedback", JSON.stringify({ text, t: Date.now() })]]);
+  // `email` says what happened to the email (for checking the setup; the feedback is saved either way).
+  let email = "not set up";
   if (process.env.RESEND_API_KEY && process.env.FEEDBACK_TO) {
     try {
-      await fetch("https://api.resend.com/emails", {
+      const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" },
         body: JSON.stringify({ from: "senti study <study@playsenti.com>", to: process.env.FEEDBACK_TO,
           subject: "Listening study feedback", text }),
       });
-    } catch { /* it's saved either way */ }
-  }
-  return json({ ok: true });
+      email = r.ok ? "sent" : `refused (${r.status}): ${((await r.json().catch(() => ({}))).message ?? "").slice(0, 200)}`;
+    } catch { email = "failed"; }
+  } else if (process.env.RESEND_API_KEY) email = "FEEDBACK_TO not set";
+  return json({ ok: true, email });
 }
