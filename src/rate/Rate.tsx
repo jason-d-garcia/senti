@@ -5,7 +5,8 @@ import { makePlan, newRaterCode } from "./plan";
 import type { StudySong, Trial } from "./plan";
 
 /**
- * Unlisted listening study (/rate/): each person hears the same 50 short clips in their own random order, with a few
+ * Unlisted listening study (/rate/): 100 songs in two halves that each cover the map; each person hears one half (the one
+ * fewer people have done so far), 50 short clips in their own random order with a few
  * hidden repeats, and places the mood each song expresses on a plain grid with no emotion names, so their answers can be compared with each
  * other and with the model. Progress is kept in the browser, so closing the tab and coming back resumes.
  */
@@ -14,12 +15,16 @@ const STORE = "senti:rate";
 /** Seconds of a clip to hear before Next unlocks. */
 const MIN_LISTEN = 8;
 
-interface Progress { rater: string; plan: Trial[]; done: number; unsent: Rating[] }
-interface Rating { rater: string; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number }
+interface Progress { rater: string; half: number; plan: Trial[]; done: number; unsent: Rating[] }
+interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number }
 type Pt = { v: number; a: number };
 
 function load(): Progress | null {
-  try { return JSON.parse(localStorage.getItem(STORE) ?? "null"); } catch { return null; }
+  try {
+    const p = JSON.parse(localStorage.getItem(STORE) ?? "null");
+    // Progress from the first 50-song version (no halves) can't continue: start fresh.
+    return p && typeof p.half === "number" ? p : null;
+  } catch { return null; }
 }
 function save(p: Progress) {
   try { localStorage.setItem(STORE, JSON.stringify(p)); } catch { /* private mode: progress lives only in this tab */ }
@@ -57,16 +62,25 @@ export function Rate() {
     return () => { cancelled = true; };
   }, [progress?.done]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const start = () => {
-    if (!songs) return;
-    const p: Progress = { rater: newRaterCode(), plan: makePlan([...songs.keys()]), done: 0, unsent: [] };
+  const [starting, setStarting] = useState(false);
+  const start = async () => {
+    if (!songs || starting) return;
+    setStarting(true);
+    // The half fewer people have started; a coin flip if the counts can't be fetched.
+    let half = Math.random() < 0.5 ? 0 : 1;
+    try {
+      const { halves } = await (await fetch("/api/rate", { cache: "no-store" })).json();
+      if (Array.isArray(halves) && halves[0] !== halves[1]) half = halves[0] < halves[1] ? 0 : 1;
+    } catch { /* keep the coin flip */ }
+    const ids = [...songs.values()].filter((s) => s.half === half).map((s) => s.id);
+    const p: Progress = { rater: newRaterCode(), half, plan: makePlan(ids), done: 0, unsent: [] };
     save(p); setProgress(p);
   };
 
-  const answer = async (r: Omit<Rating, "rater" | "trial" | "song" | "repeat">) => {
+  const answer = async (r: Omit<Rating, "rater" | "half" | "trial" | "song" | "repeat">) => {
     if (!progress) return;
     const t = progress.plan[progress.done];
-    const rating: Rating = { rater: progress.rater, trial: progress.done, song: t.id, repeat: t.repeat, ...r };
+    const rating: Rating = { rater: progress.rater, half: progress.half, trial: progress.done, song: t.id, repeat: t.repeat, ...r };
     const next: Progress = { ...progress, done: progress.done + 1 };
     if (!(await send(rating))) next.unsent = [...progress.unsent, rating];
     save(next); setProgress(next);
@@ -79,7 +93,7 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>senti listening study</h1>
-        <p>You'll hear {songs.size + 4} short song clips, about 20 minutes in all.</p>
+        <p>You'll hear {songs.size / 2 + 4} short song clips, about 20 minutes in all.</p>
         <p>For each one, tap the grid where the <b>song's mood</b> belongs:</p>
         <ul>
           <li><b>Left to right:</b> how negative or positive the mood it expresses is.</li>
@@ -88,7 +102,7 @@ export function Rate() {
         <p>Rate the mood the song puts across, not how it makes you feel. A sad song you love still goes on the negative side.</p>
         <p>There are no right answers. Go with your first instinct, and judge the song as you hear it, not what you know about it. Headphones help.</p>
         <p className="dim">Your progress is saved on this device, so you can take a break and come back.</p>
-        <button type="button" className="primary" onClick={start}>Start</button>
+        <button type="button" className="primary" onClick={start} disabled={starting}>Start</button>
       </main>
     );
   }

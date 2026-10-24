@@ -1,15 +1,16 @@
-"""Picks the 50 songs for the listening study (rate/), spread evenly over the part of the map that has songs.
+"""Picks the 100 songs for the listening study (rate/), spread evenly over the part of the map that has songs.
 
-The occupied area is cut into 0.16 x 0.16 squares; each square with songs gives the song nearest its centre
-(preferring one whose preview is already stored, so it plays without a lookup). The three squares with the fewest
-songs are dropped to land on 50. Writes public/rate/songs.json: title, artist, the model's placement, and the
-stored preview when there is one.
+The occupied area is cut into 0.105 x 0.105 squares; each square with songs gives the song nearest its centre
+(preferring one whose preview is already stored, so it plays without a lookup). The squares with the fewest songs
+are dropped to land on 100. The songs are then split into two halves of 50 that each cover the whole map
+(alternating along a snake path through the squares); each rater hears one half. Writes public/rate/songs.json:
+title, artist, half, the model's placement, and the stored preview when there is one.
 
     python3 scripts/pick_rating_songs.py
 """
 import glob, json, math
 
-CELL, N = 0.16, 50
+CELL, N = 0.105, 100
 rows = [r for f in sorted(glob.glob("public/songs/*.json")) for r in json.load(open(f))["songs"]]
 cells = {}
 for r in rows:
@@ -17,12 +18,14 @@ for r in rows:
 keep = sorted(cells, key=lambda k: (-len(cells[k]), k))[:N]
 
 picked = []
-for (i, j) in sorted(keep):
+# Snake through the squares (column by column, alternating direction) so neighbours land in different halves.
+snake = sorted(keep, key=lambda k: (k[0], k[1] if k[0] % 2 == 0 else -k[1]))
+for n, (i, j) in enumerate(snake):
     cx, cy = (i + 0.5) * CELL, (j + 0.5) * CELL
     near = lambda r: math.hypot(r[3] - cx, r[4] - cy)
     has_preview = [r for r in cells[(i, j)] if len(r) > 7 and r[7]]
     best = min(has_preview or cells[(i, j)], key=near)
-    s = {"id": f"{best[1]}|{best[2]}", "title": best[1], "artist": best[2], "v": best[3], "a": best[4]}
+    s = {"id": f"{best[1]}|{best[2]}", "title": best[1], "artist": best[2], "half": n % 2, "v": best[3], "a": best[4]}
     if len(best) > 7 and best[7]:
         s["preview"] = best[7]
     picked.append(s)

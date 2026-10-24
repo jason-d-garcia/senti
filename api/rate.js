@@ -1,5 +1,6 @@
 // Listening-study ratings from the unlisted /rate/ page, stored in the same Upstash Redis as listener votes.
-// POST saves one rating; GET ?format=csv downloads them all (anonymous rater codes, no names).
+// POST saves one rating; GET gives counts (and raters per half); GET ?format=csv downloads every rating
+// (anonymous rater codes, no names).
 
 const URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -18,7 +19,7 @@ async function redis(commands) {
   return (await r.json()).map((x) => x.result);
 }
 
-const COLUMNS = ["rater", "trial", "song", "repeat", "v", "a", "skipped", "listened_s", "with_lyrics", "t"];
+const COLUMNS = ["rater", "half", "trial", "song", "repeat", "v", "a", "skipped", "listened_s", "with_lyrics", "t"];
 const csvCell = (x) => (typeof x === "string" && /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x ?? "");
 
 export async function GET(request) {
@@ -31,7 +32,9 @@ export async function GET(request) {
       "cache-control": "no-store" } });
   }
   const raters = new Set(rows.map((r) => r.rater));
-  return json({ ratings: rows.length, raters: raters.size });
+  // Raters started on each half of the songs, so a new rater can be given the half with fewer.
+  const halves = [0, 1].map((h) => new Set(rows.filter((r) => r.half === h).map((r) => r.rater)).size);
+  return json({ ratings: rows.length, raters: raters.size, halves }, 200);
 }
 
 export async function POST(request) {
@@ -52,7 +55,7 @@ export async function POST(request) {
   const [fresh] = await redis([["SET", `rate:seen:${b.rater}:${b.trial}`, "1", "NX", "EX", 60 * 60 * 24 * 365]]);
   if (fresh !== "OK") return json({ ok: true, duplicate: true });
   const row = {
-    rater: b.rater, trial: b.trial, song: b.song, repeat: !!b.repeat, skipped,
+    rater: b.rater, half: b.half === 0 || b.half === 1 ? b.half : null, trial: b.trial, song: b.song, repeat: !!b.repeat, skipped,
     v: skipped ? null : +b.v.toFixed(3), a: skipped ? null : +b.a.toFixed(3),
     listened_s: typeof b.listened === "number" ? Math.round(b.listened) : null, with_lyrics: false, t: Date.now(),
   };

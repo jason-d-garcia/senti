@@ -1,6 +1,6 @@
 /** The order one rater hears the study songs in: all of them shuffled, plus a few hidden repeats. */
 
-export interface StudySong { id: string; title: string; artist: string; v: number; a: number; preview?: [string, string, string] }
+export interface StudySong { id: string; title: string; artist: string; half: number; v: number; a: number; preview?: [string, string, string] }
 export interface Trial { id: string; repeat: boolean }
 
 export const REPEATS = 4;
