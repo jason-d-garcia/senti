@@ -27,8 +27,9 @@ async function redis(commands) {
 const COLUMNS = ["rater", "half", "trial", "song", "repeat", "v", "a", "skipped", "listened_s", "with_lyrics", "consent", "known", "t"];
 const csvCell = (x) => (typeof x === "string" && /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x ?? "");
 
-// Paid spots: at most PAID_SPOTS payment codes ever. Starting the study holds a spot for HOLD_MS (POST { reserve }),
-// so nobody who started while spots were open finds them gone at the end; holds from people who never finish lapse.
+// Paid spots: at most PAID_SPOTS payment codes ever. Starting the study holds a spot (POST { reserve }), so nobody who
+// started while spots were open finds them gone at the end. Each answer keeps the hold alive for another HOLD_MS, so
+// only people who stop answering for that long lose it.
 const PAID_SPOTS = Number(process.env.STUDY_PAID_SPOTS ?? 10);
 const HOLD_MS = 3 * 60 * 60 * 1000;
 async function spots() {
@@ -123,6 +124,7 @@ export async function POST(request) {
     v: skipped ? null : +b.v.toFixed(3), a: skipped ? null : +b.a.toFixed(3),
     listened_s: typeof b.listened === "number" ? Math.round(b.listened) : null, with_lyrics: false, consent: b.consent === true, known: b.known === true, t: Date.now(),
   };
-  await redis([["RPUSH", "rate:log", JSON.stringify(row)], ["INCR", `rate:count:${b.rater}`]]);
+  await redis([["RPUSH", "rate:log", JSON.stringify(row)], ["INCR", `rate:count:${b.rater}`],
+    ["ZADD", "rate:hold", "XX", Date.now() + HOLD_MS, b.rater]]);
   return json({ ok: true });
 }
