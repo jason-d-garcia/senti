@@ -30,7 +30,8 @@ const csvCell = (x) => (typeof x === "string" && /[",\n]/.test(x) ? `"${x.replac
 // Paid spots: at most PAID_SPOTS payment codes ever. Starting the study holds a spot (POST { reserve }), so nobody who
 // started while spots were open finds them gone at the end. Each answer keeps the hold alive for another HOLD_MS, so
 // only people who stop answering for that long lose it.
-const PAID_SPOTS = Number(process.env.STUDY_PAID_SPOTS ?? 10);
+// 10 paid places, plus the one payment code already given to Josh's first run before it was marked unpaid.
+const PAID_SPOTS = Number(process.env.STUDY_PAID_SPOTS ?? 11);
 // Test runs that are saved like any other but never take a paid spot (Josh's first run and Jason's test, on the first
 // song list).
 const UNPAID = new Set(["4md8cce7", "37753gx8", ...(process.env.STUDY_UNPAID ?? "").split(",").filter(Boolean)]);
@@ -71,7 +72,7 @@ export async function GET(request) {
   // Raters started on each half of the songs, so a new rater can be given the half with fewer.
   const halves = [0, 1].map((h) => new Set(rows.filter((r) => r.half === h).map((r) => r.rater)).size);
   const { left, issued, held } = await spots();
-  return json({ ratings: rows.length, raters: raters.size, halves, paidSpotsLeft: left, paidSpots: PAID_SPOTS,
+  return json({ ratings: rows.length, raters: raters.size, halves, paidSpotsLeft: left, paidSpots: PAID_SPOTS - 1,
     paymentCodesIssued: issued, spotsHeld: held }, 200);
 }
 
