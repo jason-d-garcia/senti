@@ -21,6 +21,8 @@ interface Progress {
   consented?: number; practiced?: number; begun?: boolean;
   /** Code for the Venmo note, issued after finishing and stored apart from the answers on the server. */
   payCode?: string;
+  /** Whether a paid spot was held for them when they started (there are a fixed number). */
+  heldSpot?: boolean;
 }
 interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; consent?: boolean; known?: boolean }
 
@@ -91,11 +93,18 @@ export function Rate() {
         const body = await r.json().catch(() => ({}));
         if (cancelled) return;
         if (r.ok && body.code) { setProgress((p) => { if (!p) return p; const n = { ...p, payCode: body.code }; save(n); return n; }); setPayError(null); }
-        else setPayError(body.error === "already claimed" ? "claimed" : "failed");
+        else setPayError(body.error === "already claimed" ? "claimed" : body.error === "spots full" ? "full" : "failed");
       } catch { if (!cancelled) setPayError("failed"); }
     })();
     return () => { cancelled = true; };
   }, [progress?.done, progress?.unsent.length, progress?.payCode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Paid spots still open, shown on the consent screen.
+  const [spotsLeft, setSpotsLeft] = useState<number | null>(null);
+  useEffect(() => {
+    fetch("/api/rate", { cache: "no-store" }).then((r) => r.json())
+      .then((b) => { if (typeof b.paidSpotsLeft === "number") setSpotsLeft(b.paidSpotsLeft); }).catch(() => {});
+  }, []);
 
   const [starting, setStarting] = useState(false);
   const [agreed, setAgreed] = useState(false);
@@ -110,7 +119,14 @@ export function Rate() {
       if (Array.isArray(halves) && halves[0] !== halves[1]) half = halves[0] < halves[1] ? 0 : 1;
     } catch { /* keep the coin flip */ }
     const ids = [...songs.values()].filter((s) => s.half === half).map((s) => s.id);
-    const p: Progress = { rater: newRaterCode(), half, plan: makePlan(ids), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false };
+    const rater = newRaterCode();
+    // Hold one of the paid spots for this run, if any are left.
+    let heldSpot = false;
+    try {
+      const r = await fetch("/api/rate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reserve: rater }) });
+      heldSpot = !!(await r.json()).reserved;
+    } catch { /* offline: they can still be paid at the end if a spot is free */ }
+    const p: Progress = { rater, half, plan: makePlan(ids), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false, heldSpot };
     save(p); setProgress(p);
   };
 
@@ -133,8 +149,13 @@ export function Rate() {
         <h1>Before you start</h1>
         <p>This is a short listening study for senti. We want to learn how people hear the mood of songs, so we can measure
           and calibrate how well our model places them. It takes about 20 minutes.</p>
-        <p><b>You get $5 through Venmo only if you finish all the songs.</b> Stopping partway is completely fine, but isn't
-          paid.</p>
+        {spotsLeft === 0 ? (
+          <p><b>All the paid spots have been taken,</b> so this study is no longer paid. You're still very welcome to take part.</p>
+        ) : (
+          <p><b>You get $5 through Venmo only if you finish all the songs.</b> Stopping partway is completely fine, but isn't
+            paid. There are a limited number of paid spots{spotsLeft !== null ? ` (${spotsLeft} left)` : ""}; starting the
+            study holds one for you for 3 hours.</p>
+        )}
         <ul>
           <li>Taking part is voluntary. You can stop at any point.</li>
           <li>You must be 18 or older.</li>
@@ -183,6 +204,9 @@ export function Rate() {
           </>
         ) : progress.unsent.length > 0 ? (
           <p className="note">{progress.unsent.length} answers are still sending. Keep this page open for a moment, and your payment code will appear.</p>
+        ) : payError === "full" ? (
+          <p className="note">The paid spots filled up before this run finished, so it isn't paid. Your answers still help a lot.
+            Thank you!</p>
         ) : payError ? (
           <p className="note">Couldn't get your payment code{payError === "claimed" ? " (one was already given out for this run)" : ""}.
             {payError === "failed" ? " Refresh to try again, or e" : " E"}mail <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your answer code below.</p>

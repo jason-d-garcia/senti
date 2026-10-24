@@ -27,6 +27,18 @@ async function redis(commands) {
 const COLUMNS = ["rater", "half", "trial", "song", "repeat", "v", "a", "skipped", "listened_s", "with_lyrics", "consent", "known", "t"];
 const csvCell = (x) => (typeof x === "string" && /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x ?? "");
 
+// Paid spots: at most PAID_SPOTS payment codes ever. Starting the study holds a spot for HOLD_MS (POST { reserve }),
+// so nobody who started while spots were open finds them gone at the end; holds from people who never finish lapse.
+const PAID_SPOTS = Number(process.env.STUDY_PAID_SPOTS ?? 10);
+const HOLD_MS = 3 * 60 * 60 * 1000;
+async function spots() {
+  const now = Date.now();
+  const [, held, open, paid] = await redis([["ZREMRANGEBYSCORE", "rate:hold", 0, now], ["ZCARD", "rate:hold"],
+    ["SCARD", "rate:pay:open"], ["SCARD", "rate:pay:paid"]]);
+  const issued = Number(open) + Number(paid);
+  return { issued, held: Number(held), left: Math.max(0, PAID_SPOTS - issued - Number(held)) };
+}
+
 /** Answers needed before a payment code is given out (each half is 50 songs plus 4 repeats). */
 const FINISHED = 50;
 const payCode = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), (n) => "abcdefghjkmnpqrstuvwxyz23456789"[n % 31]).join("");
@@ -54,13 +66,22 @@ export async function GET(request) {
   const raters = new Set(rows.map((r) => r.rater));
   // Raters started on each half of the songs, so a new rater can be given the half with fewer.
   const halves = [0, 1].map((h) => new Set(rows.filter((r) => r.half === h).map((r) => r.rater)).size);
-  return json({ ratings: rows.length, raters: raters.size, halves }, 200);
+  const { left } = await spots();
+  return json({ ratings: rows.length, raters: raters.size, halves, paidSpotsLeft: left, paidSpots: PAID_SPOTS }, 200);
 }
 
 export async function POST(request) {
   if (!URL || !TOKEN) return json({ error: "no database" }, 503);
   let b;
   try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+  if (typeof b?.reserve === "string") {
+    // Starting: hold a paid spot if one is free.
+    if (!/^[a-z0-9]{6,16}$/.test(b.reserve)) return json({ error: "bad code" }, 400);
+    const { left } = await spots();
+    if (left <= 0) return json({ reserved: false, left: 0 });
+    await redis([["ZADD", "rate:hold", Date.now() + HOLD_MS, b.reserve]]);
+    return json({ reserved: true, left: left - 1 });
+  }
   if (typeof b?.claim === "string") {
     // A finished rater asks for their payment code. One per rater; the code itself is stored apart from them.
     if (!/^[a-z0-9]{6,16}$/.test(b.claim)) return json({ error: "bad code" }, 400);
@@ -72,8 +93,14 @@ export async function POST(request) {
       n = Math.max(n, items.filter((s) => s.includes(`"rater":"${b.claim}"`)).length);
     }
     if (n < FINISHED) return json({ error: "not finished", answers: n }, 409);
+    // A held spot is honoured while the total stays within the paid spots; without one (or after it lapsed) only a
+    // free spot will do.
+    const { issued, left } = await spots();
+    const [hold] = await redis([["ZSCORE", "rate:hold", b.claim]]);
+    if (issued >= PAID_SPOTS || (hold === null && left <= 0)) return json({ error: "spots full" }, 409);
     const [first] = await redis([["SET", `rate:claimed:${b.claim}`, "1", "NX"]]);
     if (first !== "OK") return json({ error: "already claimed" }, 409);
+    await redis([["ZREM", "rate:hold", b.claim]]);
     const code = payCode();
     await redis([["SADD", "rate:pay:open", code]]);
     return json({ code });
