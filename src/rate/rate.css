@@ -78,3 +78,4 @@ button { font: inherit; }
 .actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .actions .primary { margin: 0; }
 a { color: var(--ink); text-underline-offset: 3px; }
+a.primary { text-decoration: none; display: inline-block; }

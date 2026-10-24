@@ -31,10 +31,13 @@ const csvCell = (x) => (typeof x === "string" && /[",\n]/.test(x) ? `"${x.replac
 // started while spots were open finds them gone at the end. Each answer keeps the hold alive for another HOLD_MS, so
 // only people who stop answering for that long lose it.
 const PAID_SPOTS = Number(process.env.STUDY_PAID_SPOTS ?? 10);
+// Test runs that are saved like any other but never take a paid spot (Josh's first run and Jason's test, on the first
+// song list).
+const UNPAID = new Set(["4md8cce7", "37753gx8", ...(process.env.STUDY_UNPAID ?? "").split(",").filter(Boolean)]);
 const HOLD_MS = 3 * 60 * 60 * 1000;
 async function spots() {
   const now = Date.now();
-  const [, held, open, paid] = await redis([["ZREMRANGEBYSCORE", "rate:hold", 0, now], ["ZCARD", "rate:hold"],
+  const [, , held, open, paid] = await redis([["ZREMRANGEBYSCORE", "rate:hold", 0, now], ["ZREM", "rate:hold", ...UNPAID], ["ZCARD", "rate:hold"],
     ["SCARD", "rate:pay:open"], ["SCARD", "rate:pay:paid"]]);
   const issued = Number(open) + Number(paid);
   return { issued, held: Number(held), left: Math.max(0, PAID_SPOTS - issued - Number(held)) };
@@ -95,6 +98,7 @@ export async function POST(request) {
       n = Math.max(n, items.filter((s) => s.includes(`"rater":"${b.claim}"`)).length);
     }
     if (n < FINISHED) return json({ error: "not finished", answers: n }, 409);
+    if (UNPAID.has(b.claim)) return json({ error: "unpaid run" }, 409);
     // A held spot is honoured while the total stays within the paid spots; without one (or after it lapsed) only a
     // free spot will do.
     const { issued, left } = await spots();

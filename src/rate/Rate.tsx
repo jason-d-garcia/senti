@@ -16,6 +16,8 @@ const STORE = "senti:rate";
 const MIN_LISTEN = 8;
 
 interface Progress {
+  /** Which song list this run was planned from (public/rate/songs.json "version"; the first list had none). */
+  version?: number;
   rater: string; half: number; plan: Trial[]; done: number; unsent: Rating[];
   /** When they ticked the consent box; practice songs heard (not scored); whether the scored songs have begun. */
   consented?: number; practiced?: number; begun?: boolean;
@@ -39,6 +41,8 @@ type Pt = { v: number; a: number };
 
 function load(): Progress | null {
   try {
+    // A link ending in ?fresh starts a new run on this device (the old one's answers stay saved).
+    if (new URLSearchParams(window.location.search).has("fresh")) { localStorage.removeItem(STORE); history.replaceState(null, "", window.location.pathname); return null; }
     const p = JSON.parse(localStorage.getItem(STORE) ?? "null");
     // Progress from the first 50-song version (no halves) can't continue: start fresh.
     if (!p || typeof p.half !== "number") return null;
@@ -59,13 +63,22 @@ const clamp = (x: number) => Math.max(-1, Math.min(1, x));
 
 export function Rate() {
   const [songs, setSongs] = useState<Map<string, StudySong> | null>(null);
+  const [listVersion, setListVersion] = useState(1);
+  // Runs started on the first song list (before it was rebalanced across decades) finish on that list.
+  const [oldSongs, setOldSongs] = useState<Map<string, StudySong> | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(load);
 
   useEffect(() => {
     fetch("/rate/songs.json").then((r) => r.json())
-      .then(({ songs }: { songs: StudySong[] }) => setSongs(new Map(songs.map((s) => [s.id, s]))))
+      .then(({ songs, version }: { songs: StudySong[]; version?: number }) => {
+        setListVersion(version ?? 1);
+        setSongs(new Map(songs.map((s) => [s.id, s])));
+      })
       .catch(() => setLoadError(true));
+    fetch("/rate/songs_v1.json").then((r) => r.json())
+      .then(({ songs }: { songs: StudySong[] }) => setOldSongs(new Map(songs.map((s) => [s.id, s]))))
+      .catch(() => setOldSongs(new Map()));
   }, []);
 
   // Ratings that failed to send (offline for a moment) go again whenever the page is used.
@@ -93,7 +106,7 @@ export function Rate() {
         const body = await r.json().catch(() => ({}));
         if (cancelled) return;
         if (r.ok && body.code) { setProgress((p) => { if (!p) return p; const n = { ...p, payCode: body.code }; save(n); return n; }); setPayError(null); }
-        else setPayError(body.error === "already claimed" ? "claimed" : body.error === "spots full" ? "full" : "failed");
+        else setPayError(body.error === "already claimed" ? "claimed" : body.error === "spots full" ? "full" : body.error === "unpaid run" ? "unpaid" : "failed");
       } catch { if (!cancelled) setPayError("failed"); }
     })();
     return () => { cancelled = true; };
@@ -126,7 +139,7 @@ export function Rate() {
       const r = await fetch("/api/rate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reserve: rater }) });
       heldSpot = !!(await r.json()).reserved;
     } catch { /* offline: they can still be paid at the end if a spot is free */ }
-    const p: Progress = { rater, half, plan: makePlan(ids, Math.random, new Set([...songs.values()].filter((s) => s.instrumental).map((s) => s.id))), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false, heldSpot };
+    const p: Progress = { version: listVersion, rater, half, plan: makePlan(ids, Math.random, new Set([...songs.values()].filter((s) => s.instrumental).map((s) => s.id))), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false, heldSpot };
     save(p); setProgress(p);
   };
 
@@ -148,7 +161,7 @@ export function Rate() {
       <main className="rate intro">
         <h1>Before you start</h1>
         <p>This is a short listening study for senti. We want to learn how people hear the mood of songs, so we can measure
-          and calibrate how well our model places them. It takes about 20 minutes.</p>
+          and calibrate how well our model places them. It takes about 20 to 25 minutes.</p>
         {spotsLeft === 0 ? (
           <p><b>We've reached our limit of paid participants,</b> so this study is no longer paid. You're very welcome to take
             part for fun, though: every answer still helps.</p>
@@ -181,7 +194,7 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>How it works</h1>
-        <p>You'll hear {songs.size / 2 + 4} short song clips, about 20 minutes in all, after {PRACTICE.length} practice songs that don't count.</p>
+        <p>You'll hear {songs.size / 2 + 4} short song clips, about 20 to 25 minutes in all, after {PRACTICE.length} practice songs that don't count.</p>
         <p>For each one, tap the grid where the <b>song's mood</b> belongs:</p>
         <ul>
           <li><b>Left to right:</b> how negative or positive the mood it expresses is.</li>
@@ -189,6 +202,8 @@ export function Rate() {
         </ul>
         <p>Rate the mood the song puts across, not how it makes you feel. A sad song you love still goes on the negative side.</p>
         <p>There are no right answers. Go with your first instinct, and judge the song as you hear it, not what you know about it. Headphones help.</p>
+        <p><b>You don't need to hear the whole clip.</b> 10 to 15 seconds is usually enough to judge the mood; listen longer
+          only if you're unsure.</p>
         <p className="dim">Your progress is saved in this browser, so you can take a break and come back. <b>Don't use a private or incognito tab, and finish on the same phone or computer and the same browser</b>, or you'll lose your place and have to start over.</p>
         <button type="button" className="primary" onClick={start} disabled={starting}>Start</button>
       </main>
@@ -207,6 +222,11 @@ export function Rate() {
           </>
         ) : progress.unsent.length > 0 ? (
           <p className="note">{progress.unsent.length} answers are still sending. Keep this page open for a moment, and your payment code will appear.</p>
+        ) : payError === "unpaid" ? (
+          <>
+            <p className="note">This was a test run, so it doesn't take a paid spot. Your answers are saved. Thank you!</p>
+            <a className="primary" href="/rate/?fresh">Start a new run</a>
+          </>
         ) : payError === "full" ? (
           <p className="note">The paid spots filled up before this run finished, so it isn't paid. Your answers still help a lot.
             Thank you!</p>
@@ -242,7 +262,9 @@ export function Rate() {
   }
 
   const t = progress.plan[progress.done];
-  const song = songs.get(t.id);
+  const runSongs = (progress.version ?? 1) === listVersion ? songs : oldSongs;
+  if (!runSongs) return <main className="rate" aria-busy="true" />;
+  const song = runSongs.get(t.id);
   // Only if the song list changed after this person started.
   if (!song) {
     return (
@@ -365,7 +387,7 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
           <p className="artist">{song.artist}</p>
           <p className="status" aria-live="polite">
             {src === undefined ? "Finding the clip…" : src === null ? "This clip won't load. Tap Skip below."
-              : heardEnough ? "Place it on the grid when you're ready." : playing ? "Listening…" : "Press play to hear the clip."}
+              : heardEnough ? "Place it on the grid when you're ready." : playing ? "Listening… (10–15 seconds is usually enough)" : "Press play to hear the clip."}
           </p>
         </div>
         {src && <audio ref={audio} src={src} preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
