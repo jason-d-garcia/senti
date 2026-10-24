@@ -152,11 +152,13 @@ export function Rate() {
         {spotsLeft === 0 ? (
           <p><b>We've reached our limit of paid participants,</b> so this study is no longer paid. You're very welcome to take
             part for fun, though: every answer still helps.</p>
-        ) : (
+        ) : (<>
           <p><b>You get $5 through Venmo only if you finish all the songs.</b> Stopping partway is completely fine, but isn't
-            paid. There are a limited number of paid spots{spotsLeft !== null ? ` (${spotsLeft} left)` : ""}; starting the
-            study holds one for you as long as you keep going (it's released after 3 hours without an answer).</p>
-        )}
+            paid. There are a limited number of paid spots{spotsLeft !== null ? ` (${spotsLeft} left)` : ""}, and starting the
+            study holds one for you.</p>
+          <p>You can take breaks and come back as often as you like: do 5 songs now and more later. But if you go <b>3 hours
+            without answering a song</b>, your paid spot is released for someone else.</p>
+        </>)}
         <ul>
           <li>Taking part is voluntary. You can stop at any point.</li>
           <li>You must be 18 or older.</li>
