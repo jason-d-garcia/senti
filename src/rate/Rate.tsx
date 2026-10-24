@@ -15,15 +15,31 @@ const STORE = "senti:rate";
 /** Seconds of a clip to hear before Next unlocks. */
 const MIN_LISTEN = 8;
 
-interface Progress { rater: string; half: number; plan: Trial[]; done: number; unsent: Rating[] }
-interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number }
+interface Progress {
+  rater: string; half: number; plan: Trial[]; done: number; unsent: Rating[];
+  /** When they ticked the consent box; practice songs heard (not scored); whether the scored songs have begun. */
+  consented?: number; practiced?: number; begun?: boolean;
+}
+interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; consent?: boolean }
+
+/** Two unscored warm-up songs (not in the study) with an obvious mood, so people learn the grid before it counts. */
+const PRACTICE: StudySong[] = [
+  { id: "The Loco-Motion|Little Eva", title: "The Loco-Motion", artist: "Little Eva", half: -1, v: 0, a: 0,
+    preview: ["https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/d8/54/d7/d854d77f-7210-f5f5-5d28-c22d2526b295/mzaf_16922533634313490121.plus.aac.p.m4a",
+      "https://music.apple.com/us/album/the-loco-motion/432437358?i=432437410&uo=4", ""] },
+  { id: "Crying|Roy Orbison", title: "Crying", artist: "Roy Orbison", half: -1, v: 0, a: 0,
+    preview: ["https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/91/20/c1/9120c173-6e92-e562-fb17-fb52afe350a5/mzaf_768896915777283170.plus.aac.p.m4a",
+      "https://music.apple.com/us/album/crying/388154437?i=388154726&uo=4", ""] },
+];
 type Pt = { v: number; a: number };
 
 function load(): Progress | null {
   try {
     const p = JSON.parse(localStorage.getItem(STORE) ?? "null");
     // Progress from the first 50-song version (no halves) can't continue: start fresh.
-    return p && typeof p.half === "number" ? p : null;
+    if (!p || typeof p.half !== "number") return null;
+    // People who started before the practice songs existed carry straight on.
+    return p.practiced === undefined ? { ...p, practiced: PRACTICE.length, begun: true } : p;
   } catch { return null; }
 }
 function save(p: Progress) {
@@ -63,6 +79,7 @@ export function Rate() {
   }, [progress?.done]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [starting, setStarting] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const start = async () => {
     if (!songs || starting) return;
     setStarting(true);
@@ -73,14 +90,14 @@ export function Rate() {
       if (Array.isArray(halves) && halves[0] !== halves[1]) half = halves[0] < halves[1] ? 0 : 1;
     } catch { /* keep the coin flip */ }
     const ids = [...songs.values()].filter((s) => s.half === half).map((s) => s.id);
-    const p: Progress = { rater: newRaterCode(), half, plan: makePlan(ids), done: 0, unsent: [] };
+    const p: Progress = { rater: newRaterCode(), half, plan: makePlan(ids), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false };
     save(p); setProgress(p);
   };
 
   const answer = async (r: Omit<Rating, "rater" | "half" | "trial" | "song" | "repeat">) => {
     if (!progress) return;
     const t = progress.plan[progress.done];
-    const rating: Rating = { rater: progress.rater, half: progress.half, trial: progress.done, song: t.id, repeat: t.repeat, ...r };
+    const rating: Rating = { rater: progress.rater, half: progress.half, trial: progress.done, song: t.id, repeat: t.repeat, consent: true, ...r };
     const next: Progress = { ...progress, done: progress.done + 1 };
     if (!(await send(rating))) next.unsent = [...progress.unsent, rating];
     save(next); setProgress(next);
@@ -93,7 +110,7 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>senti listening study</h1>
-        <p>You'll hear {songs.size / 2 + 4} short song clips, about 20 minutes in all.</p>
+        <p>You'll hear {songs.size / 2 + 4} short song clips, about 20 minutes in all, after {PRACTICE.length} practice songs that don't count.</p>
         <p>For each one, tap the grid where the <b>song's mood</b> belongs:</p>
         <ul>
           <li><b>Left to right:</b> how negative or positive the mood it expresses is.</li>
@@ -102,7 +119,20 @@ export function Rate() {
         <p>Rate the mood the song puts across, not how it makes you feel. A sad song you love still goes on the negative side.</p>
         <p>There are no right answers. Go with your first instinct, and judge the song as you hear it, not what you know about it. Headphones help.</p>
         <p className="dim">Your progress is saved on this device, so you can take a break and come back.</p>
-        <button type="button" className="primary" onClick={start} disabled={starting}>Start</button>
+        <section className="consent" aria-labelledby="consent-h">
+          <h2 id="consent-h">Before you start</h2>
+          <p>This is a small study by Jason Garcia for senti, a music app, to see how people hear the mood of songs and how
+            close the app's model gets. Taking part is voluntary: you can stop at any point, and you must be 18 or older.</p>
+          <p>We save only where you place each song and how long you listened, under a random code, never your name.
+            Results are only ever reported as group averages. If you request the $5 on Venmo with your code, Jason will
+            see your Venmo name next to that code; he won't share it or connect it to your answers in anything he shows.
+            To have your answers deleted, message Jason your code.</p>
+          <label className="tick">
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+            <span>I'm 18 or older, I've read this, and I agree to take part.</span>
+          </label>
+        </section>
+        <button type="button" className="primary" onClick={start} disabled={starting || !agreed}>Start</button>
       </main>
     );
   }
@@ -115,6 +145,24 @@ export function Rate() {
         <p>To get <b>$5</b> for your time, send a Venmo request to <b>@jasondgarcia</b> with this code in the note.
           Jason checks each code against the results before paying.</p>
         {progress.unsent.length > 0 && <p className="note">{progress.unsent.length} answers are still sending. Keep this page open for a moment.</p>}
+      </main>
+    );
+  }
+
+  // Warm-up: the practice songs first (nothing is sent), then a moment to say the real ones start now.
+  const practiced = progress.practiced ?? PRACTICE.length;
+  if (practiced < PRACTICE.length) {
+    const next = () => { const n = { ...progress, practiced: practiced + 1 }; save(n); setProgress(n); };
+    return <TrialView key={`practice-${practiced}`} n={practiced} total={PRACTICE.length} practice song={PRACTICE[practiced]} onAnswer={next} />;
+  }
+  if (!progress.begun) {
+    const begin = () => { const n = { ...progress, begun: true }; save(n); setProgress(n); };
+    return (
+      <main className="rate intro">
+        <h1>Practice done</h1>
+        <p>That's how it works. Now the {progress.plan.length} songs that count. Same as before: place the mood the song puts
+          across, and go with your first instinct.</p>
+        <button type="button" className="primary" onClick={begin}>Start the real songs</button>
       </main>
     );
   }
@@ -133,8 +181,9 @@ export function Rate() {
   return <TrialView key={progress.done} n={progress.done} total={progress.plan.length} song={song} onAnswer={answer} />;
 }
 
-function TrialView({ n, total, song, onAnswer }: {
-  n: number; total: number; song: StudySong; onAnswer: (r: { v?: number; a?: number; skipped?: boolean; listened: number }) => void;
+function TrialView({ n, total, song, practice = false, onAnswer }: {
+  n: number; total: number; song: StudySong; practice?: boolean;
+  onAnswer: (r: { v?: number; a?: number; skipped?: boolean; listened: number }) => void;
 }) {
   const audio = useRef<HTMLAudioElement>(null);
   const grid = useRef<HTMLDivElement>(null);
@@ -188,7 +237,7 @@ function TrialView({ n, total, song, onAnswer }: {
   return (
     <main className="rate trial">
       <div className="top">
-        <span className="count">Song {n + 1} of {total}</span>
+        <span className="count">{practice ? `Practice song ${n + 1} of ${total} · not counted` : `Song ${n + 1} of ${total}`}</span>
         <span className="bar" aria-hidden="true"><span style={{ width: `${(n / total) * 100}%` }} /></span>
       </div>
       <div className="song">
