@@ -70,8 +70,9 @@ export async function GET(request) {
   const raters = new Set(rows.map((r) => r.rater));
   // Raters started on each half of the songs, so a new rater can be given the half with fewer.
   const halves = [0, 1].map((h) => new Set(rows.filter((r) => r.half === h).map((r) => r.rater)).size);
-  const { left } = await spots();
-  return json({ ratings: rows.length, raters: raters.size, halves, paidSpotsLeft: left, paidSpots: PAID_SPOTS }, 200);
+  const { left, issued, held } = await spots();
+  return json({ ratings: rows.length, raters: raters.size, halves, paidSpotsLeft: left, paidSpots: PAID_SPOTS,
+    paymentCodesIssued: issued, spotsHeld: held }, 200);
 }
 
 export async function POST(request) {
