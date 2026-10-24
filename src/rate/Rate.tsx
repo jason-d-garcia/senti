@@ -197,7 +197,8 @@ export function Rate() {
           <li>Taking part is voluntary. You can stop at any point.</li>
           <li>You must be 18 or older.</li>
           <li>We save only where you place each song, how long you listened, and your age range and gender if you choose to
-            share them, under a random code, never your name. Results are only reported as group averages.</li>
+            share them (to see whether people hear music differently by age or gender), under a random code, never your name.
+            Results are only reported as group averages.</li>
           {!VOLUNTEER && <li>At the end you get a separate payment code for the Venmo request. It isn't linked to your answers, so your Venmo
             name can't be matched to how you rated.</li>}
           <li>Questions, or want your answers deleted at any time? Email <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your code.</li>
@@ -232,6 +233,8 @@ export function Rate() {
         {!fun && (
           <fieldset className="about-you">
             <legend>About you <span className="dim">(optional)</span></legend>
+            <p className="dim">This helps us see whether people hear music differently depending on age or gender. It's never
+              linked to your name, and "prefer not to say" is completely fine.</p>
             <label>Age
               <select value={age} onChange={(e) => setAge(e.target.value)}>
                 <option value="">Prefer not to say</option>
