@@ -19,6 +19,8 @@ interface Progress {
   rater: string; half: number; plan: Trial[]; done: number; unsent: Rating[];
   /** When they ticked the consent box; practice songs heard (not scored); whether the scored songs have begun. */
   consented?: number; practiced?: number; begun?: boolean;
+  /** Code for the Venmo note, issued after finishing and stored apart from the answers on the server. */
+  payCode?: string;
 }
 interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; consent?: boolean; known?: boolean }
 
@@ -78,6 +80,23 @@ export function Rate() {
     return () => { cancelled = true; };
   }, [progress?.done]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Once every answer has arrived, ask for a payment code (a separate code, not linked to the answers).
+  const [payError, setPayError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!progress || progress.done < progress.plan.length || progress.payCode || progress.unsent.length) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/rate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ claim: progress.rater }) });
+        const body = await r.json().catch(() => ({}));
+        if (cancelled) return;
+        if (r.ok && body.code) { setProgress((p) => { if (!p) return p; const n = { ...p, payCode: body.code }; save(n); return n; }); setPayError(null); }
+        else setPayError(body.error === "already claimed" ? "claimed" : "failed");
+      } catch { if (!cancelled) setPayError("failed"); }
+    })();
+    return () => { cancelled = true; };
+  }, [progress?.done, progress?.unsent.length, progress?.payCode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [starting, setStarting] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [consented, setConsented] = useState(false);
@@ -119,8 +138,8 @@ export function Rate() {
           <li>You must be 18 or older.</li>
           <li>We save only where you place each song and how long you listened, under a random code, never your name.
             Results are only reported as group averages.</li>
-          <li>If you request the $5 on Venmo with your code, the person running the study will see your Venmo name next to
-            that code. It won't be shared or connected to your answers in anything that's shown.</li>
+          <li>At the end you get a separate payment code for the Venmo request. It isn't linked to your answers, so your Venmo
+            name can't be matched to how you rated.</li>
           <li>Questions, or want your answers deleted at any time? Email <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your code.</li>
         </ul>
         <label className="tick">
@@ -154,11 +173,20 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>All done. Thank you!</h1>
-        <p>Your completion code is <b className="code">{progress.rater}</b></p>
-        <p>You get <b>$5</b> for your time through Venmo: send a request to <b>@jasondgarcia</b> with this code in the note.
-          Each code is checked against the results before paying.</p>
-        <p className="dim">Questions, or want your answers deleted? Email <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your code.</p>
-        {progress.unsent.length > 0 && <p className="note">{progress.unsent.length} answers are still sending. Keep this page open for a moment.</p>}
+        {progress.payCode ? (
+          <>
+            <p>Your payment code is <b className="code">{progress.payCode}</b></p>
+            <p>You get <b>$5</b> for your time through Venmo: send a request to <b>@jasondgarcia</b> with this payment code in
+              the note. The code isn't linked to your answers, so your Venmo name can't be matched to how you rated.</p>
+          </>
+        ) : progress.unsent.length > 0 ? (
+          <p className="note">{progress.unsent.length} answers are still sending. Keep this page open for a moment, and your payment code will appear.</p>
+        ) : payError ? (
+          <p className="note">Couldn't get your payment code{payError === "claimed" ? " (one was already given out for this run)" : ""}.
+            {payError === "failed" ? " Refresh to try again, or e" : " E"}mail <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your answer code below.</p>
+        ) : <p className="note">Getting your payment code…</p>}
+        <p className="dim">Your answer code is <b className="code">{progress.rater}</b>. Keep it if you might want your answers
+          deleted, or have a question: email <a href="mailto:study@playsenti.com">study@playsenti.com</a>.</p>
       </main>
     );
   }

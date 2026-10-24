@@ -1,6 +1,11 @@
 // Listening-study ratings from the unlisted /rate/ page, stored in the same Upstash Redis as listener votes.
 // POST saves one rating; GET gives counts (and raters per half); GET ?format=csv downloads every rating
 // (anonymous rater codes, no names).
+//
+// Payment codes: a rater who has finished asks for one (POST { claim: rater }). It is a fresh random code, stored
+// only in a set of valid codes, never next to the rater's code, so the code someone puts in a Venmo note can't be
+// matched to their answers, not even by the person paying. GET ?pay=CODE says whether a code is valid and unpaid;
+// GET ?pay=CODE&paid=1 marks it paid (knowing the code is the permission; codes are long and random).
 
 const URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -22,8 +27,23 @@ async function redis(commands) {
 const COLUMNS = ["rater", "half", "trial", "song", "repeat", "v", "a", "skipped", "listened_s", "with_lyrics", "consent", "known", "t"];
 const csvCell = (x) => (typeof x === "string" && /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x ?? "");
 
+/** Answers needed before a payment code is given out (each half is 50 songs plus 4 repeats). */
+const FINISHED = 50;
+const payCode = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), (n) => "abcdefghjkmnpqrstuvwxyz23456789"[n % 31]).join("");
+
 export async function GET(request) {
   if (!URL || !TOKEN) return json({ error: "no database" }, 503);
+  const params = new globalThis.URL(request.url).searchParams;
+  const code = params.get("pay");
+  if (code) {
+    if (!/^[a-z0-9]{6,20}$/.test(code)) return json({ code, valid: false });
+    const [unpaid, paid] = await redis([["SISMEMBER", "rate:pay:open", code], ["SISMEMBER", "rate:pay:paid", code]]);
+    if (params.get("paid") === "1" && unpaid) {
+      await redis([["SMOVE", "rate:pay:open", "rate:pay:paid", code]]);
+      return json({ code, valid: true, paid: true, note: "marked paid" });
+    }
+    return json({ code, valid: !!(unpaid || paid), paid: !!paid });
+  }
   const [items] = await redis([["LRANGE", "rate:log", 0, -1]]);
   const rows = items.map((s) => JSON.parse(s));
   if (new globalThis.URL(request.url).searchParams.get("format") === "csv") {
@@ -41,6 +61,23 @@ export async function POST(request) {
   if (!URL || !TOKEN) return json({ error: "no database" }, 503);
   let b;
   try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+  if (typeof b?.claim === "string") {
+    // A finished rater asks for their payment code. One per rater; the code itself is stored apart from them.
+    if (!/^[a-z0-9]{6,16}$/.test(b.claim)) return json({ error: "bad code" }, 400);
+    let [n] = await redis([["GET", `rate:count:${b.claim}`]]);
+    n = Number(n ?? 0);
+    if (n < FINISHED) {
+      // Answers saved before the counter existed: count them from the log.
+      const [items] = await redis([["LRANGE", "rate:log", 0, -1]]);
+      n = Math.max(n, items.filter((s) => s.includes(`"rater":"${b.claim}"`)).length);
+    }
+    if (n < FINISHED) return json({ error: "not finished", answers: n }, 409);
+    const [first] = await redis([["SET", `rate:claimed:${b.claim}`, "1", "NX"]]);
+    if (first !== "OK") return json({ error: "already claimed" }, 409);
+    const code = payCode();
+    await redis([["SADD", "rate:pay:open", code]]);
+    return json({ code });
+  }
   const inRange = (x) => typeof x === "number" && Number.isFinite(x) && x >= -1 && x <= 1;
   const skipped = b?.skipped === true;
   if (typeof b?.rater !== "string" || !/^[a-z0-9]{6,16}$/.test(b.rater) || typeof b.song !== "string" || b.song.length > 300
@@ -59,6 +96,6 @@ export async function POST(request) {
     v: skipped ? null : +b.v.toFixed(3), a: skipped ? null : +b.a.toFixed(3),
     listened_s: typeof b.listened === "number" ? Math.round(b.listened) : null, with_lyrics: false, consent: b.consent === true, known: b.known === true, t: Date.now(),
   };
-  await redis([["RPUSH", "rate:log", JSON.stringify(row)]]);
+  await redis([["RPUSH", "rate:log", JSON.stringify(row)], ["INCR", `rate:count:${b.rater}`]]);
   return json({ ok: true });
 }
