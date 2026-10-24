@@ -6,7 +6,7 @@ import type { StudySong, Trial } from "./plan";
 
 /**
  * Unlisted listening study (/rate/): each person hears the same 50 short clips in their own random order, with a few
- * hidden repeats, and places each on a plain grid with no emotion names, so their answers can be compared with each
+ * hidden repeats, and places the mood each song expresses on a plain grid with no emotion names, so their answers can be compared with each
  * other and with the model. Progress is kept in the browser, so closing the tab and coming back resumes.
  */
 
@@ -80,11 +80,12 @@ export function Rate() {
       <main className="rate intro">
         <h1>senti listening study</h1>
         <p>You'll hear {songs.size + 4} short song clips, about 20 minutes in all.</p>
-        <p>For each one, tap the grid where you feel it belongs:</p>
+        <p>For each one, tap the grid where the <b>song's mood</b> belongs:</p>
         <ul>
-          <li><b>Left to right:</b> how bad or good it feels.</li>
+          <li><b>Left to right:</b> how negative or positive the mood it expresses is.</li>
           <li><b>Bottom to top:</b> how calm or energetic it is.</li>
         </ul>
+        <p>Rate the mood the song puts across, not how it makes you feel. A sad song you love still goes on the negative side.</p>
         <p>There are no right answers. Go with your first instinct, and judge the song as you hear it, not what you know about it. Headphones help.</p>
         <p className="dim">Your progress is saved on this device, so you can take a break and come back.</p>
         <button type="button" className="primary" onClick={start}>Start</button>
@@ -194,10 +195,10 @@ function TrialView({ n, total, song, onAnswer }: {
       <div className="grid-wrap">
         <span className="edge e-top">Energetic</span>
         <span className="edge e-bottom">Calm</span>
-        <span className="edge e-left">Feels bad</span>
-        <span className="edge e-right">Feels good</span>
+        <span className="edge e-left">Negative</span>
+        <span className="edge e-right">Positive</span>
         <div ref={grid} className="grid" role="application" tabIndex={0}
-          aria-label="Place the song: left to right is how bad or good it feels, bottom to top is how calm or energetic it is. Use the arrow keys."
+          aria-label="Place the song's mood: left to right is how negative or positive it is, bottom to top is how calm or energetic it is. Use the arrow keys."
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); place(e); }}
           onPointerMove={(e) => { if (e.buttons) place(e); }} onKeyDown={onKey}>
           <span className="axis ax-x" /><span className="axis ax-y" />
