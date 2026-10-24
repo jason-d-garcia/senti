@@ -16,6 +16,9 @@ const STORE = "senti:rate";
 const MIN_LISTEN = 8;
 
 interface Progress {
+  /** Under-18 'just for fun' run: nothing is sent or saved on the server, no paid spot; answers stay on the device. */
+  fun?: boolean;
+  funAnswers?: { id: string; v: number; a: number }[];
   /** Which song list this run was planned from (public/rate/songs.json "version"; the first list had none). */
   version?: number;
   rater: string; half: number; plan: Trial[]; done: number; unsent: Rating[];
@@ -98,7 +101,7 @@ export function Rate() {
   // Once every answer has arrived, ask for a payment code (a separate code, not linked to the answers).
   const [payError, setPayError] = useState<string | null>(null);
   useEffect(() => {
-    if (!progress || progress.done < progress.plan.length || progress.payCode || progress.unsent.length) return;
+    if (!progress || progress.fun || progress.done < progress.plan.length || progress.payCode || progress.unsent.length) return;
     let cancelled = false;
     (async () => {
       try {
@@ -121,6 +124,7 @@ export function Rate() {
 
   const [starting, setStarting] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [fun, setFun] = useState(false);
   const [consented, setConsented] = useState(false);
   const start = async () => {
     if (!songs || starting) return;
@@ -133,13 +137,13 @@ export function Rate() {
     } catch { /* keep the coin flip */ }
     const ids = [...songs.values()].filter((s) => s.half === half).map((s) => s.id);
     const rater = newRaterCode();
-    // Hold one of the paid spots for this run, if any are left.
+    // Hold one of the paid spots for this run, if any are left (not for a just-for-fun run).
     let heldSpot = false;
-    try {
+    if (!fun) try {
       const r = await fetch("/api/rate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reserve: rater }) });
       heldSpot = !!(await r.json()).reserved;
     } catch { /* offline: they can still be paid at the end if a spot is free */ }
-    const p: Progress = { version: listVersion, rater, half, plan: makePlan(ids, Math.random, new Set([...songs.values()].filter((s) => s.instrumental).map((s) => s.id))), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false, heldSpot };
+    const p: Progress = { version: listVersion, rater, half, plan: makePlan(ids, Math.random, new Set([...songs.values()].filter((s) => s.instrumental).map((s) => s.id))), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false, heldSpot, ...(fun ? { fun: true, funAnswers: [] } : {}) };
     save(p); setProgress(p);
   };
 
@@ -148,7 +152,10 @@ export function Rate() {
     const t = progress.plan[progress.done];
     const rating: Rating = { rater: progress.rater, half: progress.half, trial: progress.done, song: t.id, repeat: t.repeat, consent: true, ...r };
     const next: Progress = { ...progress, done: progress.done + 1 };
-    if (!(await send(rating))) next.unsent = [...progress.unsent, rating];
+    if (progress.fun) {
+      // Just for fun: kept on this device only, for the little summary at the end.
+      if (r.v !== undefined && r.a !== undefined && !t.repeat) next.funAnswers = [...(progress.funAnswers ?? []), { id: t.id, v: r.v, a: r.a }];
+    } else if (!(await send(rating))) next.unsent = [...progress.unsent, rating];
     save(next); setProgress(next);
   };
 
@@ -185,7 +192,10 @@ export function Rate() {
           <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
           <span>I'm 18 or older, I've read this, and I agree to take part.</span>
         </label>
-        <button type="button" className="primary" onClick={() => setConsented(true)} disabled={!agreed}>Continue</button>
+        <button type="button" className="primary" onClick={() => { setFun(false); setConsented(true); }} disabled={!agreed}>Continue</button>
+        <p className="dim under18">Under 18? You can still try it <button type="button" className="link inline"
+          onClick={() => { setFun(true); setConsented(true); }}>just for fun</button>. Nothing you do is saved or sent anywhere,
+          there's no payment, and at the end you'll see how your ears compare with senti's.</p>
       </main>
     );
   }
@@ -194,6 +204,7 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>How it works</h1>
+        {fun && <p className="note"><b>Just-for-fun mode:</b> your answers stay on this device and aren't part of the study.</p>}
         <p>You'll hear {songs.size / 2 + 4} short song clips, about 20 to 25 minutes in all, after {PRACTICE.length} practice songs that don't count.</p>
         <p>For each one, tap the grid where the <b>song's mood</b> belongs:</p>
         <ul>
@@ -214,7 +225,8 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>All done. Thank you!</h1>
-        {progress.payCode ? (
+        {progress.fun && <FunSummary answers={progress.funAnswers ?? []} songs={((progress.version ?? 1) === listVersion ? songs : oldSongs) ?? songs} />}
+        {progress.fun ? null : progress.payCode ? (
           <>
             <p>Your payment code is <b className="code">{progress.payCode}</b></p>
             <p>You get <b>$5</b> for your time through Venmo: send a request to <b>@jasondgarcia</b> with this payment code in
@@ -235,8 +247,8 @@ export function Rate() {
             {payError === "failed" ? " Refresh to try again, or e" : " E"}mail <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your answer code below.</p>
         ) : <p className="note">Getting your payment code…</p>}
         <Feedback />
-        <p className="dim">Your answer code is <b className="code">{progress.rater}</b>. Keep it if you might want your answers
-          deleted, or have a question: email <a href="mailto:study@playsenti.com">study@playsenti.com</a>.</p>
+        {!progress.fun && <p className="dim">Your answer code is <b className="code">{progress.rater}</b>. Keep it if you might want your answers
+          deleted, or have a question: email <a href="mailto:study@playsenti.com">study@playsenti.com</a>.</p>}
       </main>
     );
   }
@@ -422,5 +434,23 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
         </button>
       </div>
     </main>
+  );
+}
+
+/** End of a just-for-fun run: how often the listener and senti's model heard a song the same way. */
+function FunSummary({ answers, songs }: { answers: { id: string; v: number; a: number }[]; songs: Map<string, StudySong> }) {
+  const pairs = answers.flatMap((x) => { const s = songs.get(x.id); return s ? [{ ...x, song: s }] : []; });
+  if (!pairs.length) return null;
+  const quarter = (v: number, a: number) => `${v >= 0}${a >= 0}`;
+  const same = pairs.filter((p) => quarter(p.v, p.a) === quarter(p.song.v, p.song.a)).length;
+  const dist = (p: (typeof pairs)[number]) => Math.hypot(p.v - p.song.v, p.a - p.song.a);
+  const closest = [...pairs].sort((x, y) => dist(x) - dist(y))[0];
+  const furthest = [...pairs].sort((x, y) => dist(y) - dist(x))[0];
+  return (
+    <>
+      <p>You and senti put <b>{same} of {pairs.length}</b> songs in the same quarter of the map.</p>
+      <p>You agreed most on <b>{closest.song.title}</b>, and heard <b>{furthest.song.title}</b> most differently.</p>
+      <p className="dim">This was just-for-fun mode, so nothing was saved.</p>
+    </>
   );
 }

@@ -79,3 +79,5 @@ button { font: inherit; }
 .actions .primary { margin: 0; }
 a { color: var(--ink); text-underline-offset: 3px; }
 a.primary { text-decoration: none; display: inline-block; }
+.under18 { margin-top: 18px; }
+.link.inline { padding: 0; min-height: 0; color: var(--ink); font: inherit; }
