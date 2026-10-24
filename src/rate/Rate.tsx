@@ -245,7 +245,7 @@ export function Rate() {
           <p className="note">Couldn't get your payment code{payError === "claimed" ? " (one was already given out for this run)" : ""}.
             {payError === "failed" ? " Refresh to try again, or e" : " E"}mail <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your answer code below.</p>
         ) : <p className="note">Getting your payment code…</p>}
-        <FunSummary answers={progress.funAnswers ?? []} songs={((progress.version ?? 1) === listVersion ? songs : oldSongs) ?? songs} fun={!!progress.fun} />
+        <FunSummary answers={progress.funAnswers ?? []} songs={((progress.version ?? 1) === listVersion ? songs : oldSongs) ?? songs} fun={!!progress.fun} rater={progress.rater} />
         <Feedback />
         {!progress.fun && <p className="dim">Your answer code is <b className="code">{progress.rater}</b>. Keep it if you might want your answers
           deleted, or have a question: email <a href="mailto:study@playsenti.com">study@playsenti.com</a>.</p>}
@@ -438,8 +438,15 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
 }
 
 /** End of a just-for-fun run: how often the listener and senti's model heard a song the same way. */
-function FunSummary({ answers, songs, fun }: { answers: { id: string; v: number; a: number }[]; songs: Map<string, StudySong>; fun: boolean }) {
+function FunSummary({ answers: local, songs, fun, rater }: { answers: { id: string; v: number; a: number }[]; songs: Map<string, StudySong>; fun: boolean; rater: string }) {
   const [shared, setShared] = useState<string | null>(null);
+  // Runs from before answers were kept on the device: fetch this run's own placements by its answer code.
+  const [fetched, setFetched] = useState<{ id: string; v: number; a: number }[]>([]);
+  useEffect(() => {
+    if (local.length || fun) return;
+    fetch(`/api/rate?answers=${rater}`).then((r) => r.json()).then((b) => { if (Array.isArray(b.answers)) setFetched(b.answers); }).catch(() => {});
+  }, [local.length, fun, rater]);
+  const answers = local.length ? local : fetched;
   const pairs = answers.flatMap((x) => { const s = songs.get(x.id); return s ? [{ ...x, song: s }] : []; });
   if (!pairs.length) return null;
   const quarter = (v: number, a: number) => `${v >= 0}${a >= 0}`;

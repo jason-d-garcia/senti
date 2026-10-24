@@ -53,6 +53,15 @@ const payCode = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), (n)
 export async function GET(request) {
   if (!URL || !TOKEN) return json({ error: "no database" }, 503);
   const params = new globalThis.URL(request.url).searchParams;
+  // One run's own placements (by its answer code), for its end-of-study summary on a device that didn't keep them.
+  const mine = params.get("answers");
+  if (mine) {
+    if (!/^[a-z0-9]{6,16}$/.test(mine)) return json({ answers: [] });
+    const [items] = await redis([["LRANGE", "rate:log", 0, -1]]);
+    const answers = items.map((s) => JSON.parse(s)).filter((r) => r.rater === mine && !r.repeat && !r.skipped && r.v !== null)
+      .map((r) => ({ id: r.song, v: r.v, a: r.a }));
+    return json({ answers });
+  }
   const code = params.get("pay");
   if (code) {
     if (!/^[a-z0-9]{6,20}$/.test(code)) return json({ code, valid: false });
