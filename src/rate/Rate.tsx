@@ -18,6 +18,7 @@ const MIN_LISTEN = 8;
 interface Progress {
   /** Under-18 'just for fun' run: nothing is sent or saved on the server, no paid spot; answers stay on the device. */
   fun?: boolean;
+  /** This person's own placements, kept on the device for the "how your ears compare" summary at the end. */
   funAnswers?: { id: string; v: number; a: number }[];
   /** Which song list this run was planned from (public/rate/songs.json "version"; the first list had none). */
   version?: number;
@@ -152,10 +153,9 @@ export function Rate() {
     const t = progress.plan[progress.done];
     const rating: Rating = { rater: progress.rater, half: progress.half, trial: progress.done, song: t.id, repeat: t.repeat, consent: true, ...r };
     const next: Progress = { ...progress, done: progress.done + 1 };
-    if (progress.fun) {
-      // Just for fun: kept on this device only, for the little summary at the end.
-      if (r.v !== undefined && r.a !== undefined && !t.repeat) next.funAnswers = [...(progress.funAnswers ?? []), { id: t.id, v: r.v, a: r.a }];
-    } else if (!(await send(rating))) next.unsent = [...progress.unsent, rating];
+    // Kept on this device too, for the summary at the end.
+    if (r.v !== undefined && r.a !== undefined && !t.repeat) next.funAnswers = [...(progress.funAnswers ?? []), { id: t.id, v: r.v, a: r.a }];
+    if (!progress.fun && !(await send(rating))) next.unsent = [...progress.unsent, rating];
     save(next); setProgress(next);
   };
 
@@ -225,7 +225,6 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>All done. Thank you!</h1>
-        {progress.fun && <FunSummary answers={progress.funAnswers ?? []} songs={((progress.version ?? 1) === listVersion ? songs : oldSongs) ?? songs} />}
         {progress.fun ? null : progress.payCode ? (
           <>
             <p>Your payment code is <b className="code">{progress.payCode}</b></p>
@@ -246,6 +245,7 @@ export function Rate() {
           <p className="note">Couldn't get your payment code{payError === "claimed" ? " (one was already given out for this run)" : ""}.
             {payError === "failed" ? " Refresh to try again, or e" : " E"}mail <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your answer code below.</p>
         ) : <p className="note">Getting your payment code…</p>}
+        <FunSummary answers={progress.funAnswers ?? []} songs={((progress.version ?? 1) === listVersion ? songs : oldSongs) ?? songs} fun={!!progress.fun} />
         <Feedback />
         {!progress.fun && <p className="dim">Your answer code is <b className="code">{progress.rater}</b>. Keep it if you might want your answers
           deleted, or have a question: email <a href="mailto:study@playsenti.com">study@playsenti.com</a>.</p>}
@@ -438,7 +438,8 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
 }
 
 /** End of a just-for-fun run: how often the listener and senti's model heard a song the same way. */
-function FunSummary({ answers, songs }: { answers: { id: string; v: number; a: number }[]; songs: Map<string, StudySong> }) {
+function FunSummary({ answers, songs, fun }: { answers: { id: string; v: number; a: number }[]; songs: Map<string, StudySong>; fun: boolean }) {
+  const [shared, setShared] = useState<string | null>(null);
   const pairs = answers.flatMap((x) => { const s = songs.get(x.id); return s ? [{ ...x, song: s }] : []; });
   if (!pairs.length) return null;
   const quarter = (v: number, a: number) => `${v >= 0}${a >= 0}`;
@@ -446,11 +447,22 @@ function FunSummary({ answers, songs }: { answers: { id: string; v: number; a: n
   const dist = (p: (typeof pairs)[number]) => Math.hypot(p.v - p.song.v, p.a - p.song.a);
   const closest = [...pairs].sort((x, y) => dist(x) - dist(y))[0];
   const furthest = [...pairs].sort((x, y) => dist(y) - dist(x))[0];
+  const text = `I put ${same} of ${pairs.length} songs in the same mood as senti's AI 🎧 Can your ears beat it?`;
+  const share = async () => {
+    const url = "https://playsenti.com/rate/";
+    try {
+      if (navigator.share) { await navigator.share({ title: "senti listening study", text, url }); setShared("Thanks for sharing!"); return; }
+      await navigator.clipboard.writeText(`${text} ${url}`); setShared("Copied. Paste it anywhere!");
+    } catch { /* closed the share sheet */ }
+  };
   return (
-    <>
+    <section className="summary">
+      <h2>How your ears compare</h2>
       <p>You and senti put <b>{same} of {pairs.length}</b> songs in the same quarter of the map.</p>
       <p>You agreed most on <b>{closest.song.title}</b>, and heard <b>{furthest.song.title}</b> most differently.</p>
-      <p className="dim">This was just-for-fun mode, so nothing was saved.</p>
-    </>
+      <button type="button" className="ghost-btn" onClick={share}>Share your result</button>
+      {shared && <p className="dim">{shared}</p>}
+      {fun && <p className="dim">This was just-for-fun mode, so nothing was saved.</p>}
+    </section>
   );
 }
