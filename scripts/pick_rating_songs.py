@@ -11,7 +11,10 @@ title, artist, half, the model's placement, and the stored preview when there is
 import glob, json, math
 
 CELL, N = 0.105, 100
-rows = [r for f in sorted(glob.glob("public/songs/*.json")) for r in json.load(open(f))["songs"]]
+# Instrumentals: nothing for the lyrics model to read, so they can't test it. (Swapped out of the first study for
+# the nearest song with singing in the same square.)
+INSTRUMENTAL = {"San Antonio Rose|Floyd Cramer", "Tuff|Ace Cannon", "Wonderland by Night|Bert Kaempfert", "Yellow Bird|Arthur Lyman"}
+rows = [r for f in sorted(glob.glob("public/songs/*.json")) for r in json.load(open(f))["songs"] if f"{r[1]}|{r[2]}" not in INSTRUMENTAL]
 cells = {}
 for r in rows:
     cells.setdefault((math.floor(r[3] / CELL), math.floor(r[4] / CELL)), []).append(r)
