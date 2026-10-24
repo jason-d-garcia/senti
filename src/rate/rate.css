@@ -20,6 +20,8 @@ button { font: inherit; }
 .tick { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; margin-top: 6px; color: var(--ink); }
 .tick input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
 .note { color: var(--dim); }
+.known { display: flex; gap: 10px; align-items: center; min-height: 44px; color: var(--dim); cursor: pointer; }
+.known input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
 .code { font-family: ui-monospace, monospace; color: var(--accent); letter-spacing: 0.06em; }
 
 .primary {

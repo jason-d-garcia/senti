@@ -20,7 +20,7 @@ interface Progress {
   /** When they ticked the consent box; practice songs heard (not scored); whether the scored songs have begun. */
   consented?: number; practiced?: number; begun?: boolean;
 }
-interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; consent?: boolean }
+interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; consent?: boolean; known?: boolean }
 
 /** Two unscored warm-up songs (not in the study) with an obvious mood, so people learn the grid before it counts. */
 const PRACTICE: StudySong[] = [
@@ -183,7 +183,7 @@ export function Rate() {
 
 function TrialView({ n, total, song, practice = false, onAnswer }: {
   n: number; total: number; song: StudySong; practice?: boolean;
-  onAnswer: (r: { v?: number; a?: number; skipped?: boolean; listened: number }) => void;
+  onAnswer: (r: { v?: number; a?: number; skipped?: boolean; listened: number; known?: boolean }) => void;
 }) {
   const audio = useRef<HTMLAudioElement>(null);
   const grid = useRef<HTMLDivElement>(null);
@@ -193,6 +193,7 @@ function TrialView({ n, total, song, practice = false, onAnswer }: {
   const [ended, setEnded] = useState(false);
   const [pt, setPt] = useState<Pt | null>(null);
   const [busy, setBusy] = useState(false);
+  const [known, setKnown] = useState(false);
 
   // Songs without a stored preview are looked up when they come up.
   useEffect(() => {
@@ -231,7 +232,7 @@ function TrialView({ n, total, song, practice = false, onAnswer }: {
     if (busy) return;
     setBusy(true);
     audio.current?.pause();
-    onAnswer(skipped ? { skipped: true, listened } : { v: pt!.v, a: pt!.a, listened });
+    onAnswer(skipped ? { skipped: true, listened, known } : { v: pt!.v, a: pt!.a, listened, known });
   };
 
   return (
@@ -271,6 +272,9 @@ function TrialView({ n, total, song, practice = false, onAnswer }: {
         </div>
       </div>
 
+      <label className="known">
+        <input type="checkbox" checked={known} onChange={(e) => setKnown(e.target.checked)} /> I already know this song
+      </label>
       <div className="actions">
         {/* Skipping is only for a clip that won't play, so people can't skip songs they find hard to place. */}
         {src === null ? <button type="button" className="link" onClick={() => submit(true)} disabled={busy}>Skip</button> : <span />}
