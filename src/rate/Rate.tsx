@@ -16,7 +16,7 @@ const STORE = "senti:rate";
 const MIN_LISTEN = 8;
 
 interface Progress { rater: string; half: number; plan: Trial[]; done: number; unsent: Rating[] }
-interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number }
+interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; lyrics?: boolean }
 type Pt = { v: number; a: number };
 
 function load(): Progress | null {
@@ -100,6 +100,7 @@ export function Rate() {
           <li><b>Bottom to top:</b> how calm or energetic it is.</li>
         </ul>
         <p>Rate the mood the song puts across, not how it makes you feel. A sad song you love still goes on the negative side.</p>
+        <p>Each song has a <b>Read the lyrics</b> link if you want them. It's optional.</p>
         <p>There are no right answers. Go with your first instinct, and judge the song as you hear it, not what you know about it. Headphones help.</p>
         <p className="dim">Your progress is saved on this device, so you can take a break and come back.</p>
         <button type="button" className="primary" onClick={start} disabled={starting}>Start</button>
@@ -134,7 +135,7 @@ export function Rate() {
 }
 
 function TrialView({ n, total, song, onAnswer }: {
-  n: number; total: number; song: StudySong; onAnswer: (r: { v?: number; a?: number; skipped?: boolean; listened: number }) => void;
+  n: number; total: number; song: StudySong; onAnswer: (r: { v?: number; a?: number; skipped?: boolean; listened: number; lyrics?: boolean }) => void;
 }) {
   const audio = useRef<HTMLAudioElement>(null);
   const grid = useRef<HTMLDivElement>(null);
@@ -144,6 +145,7 @@ function TrialView({ n, total, song, onAnswer }: {
   const [ended, setEnded] = useState(false);
   const [pt, setPt] = useState<Pt | null>(null);
   const [busy, setBusy] = useState(false);
+  const [openedLyrics, setOpenedLyrics] = useState(false);
 
   // Songs without a stored preview are looked up when they come up.
   useEffect(() => {
@@ -182,7 +184,7 @@ function TrialView({ n, total, song, onAnswer }: {
     if (busy) return;
     setBusy(true);
     audio.current?.pause();
-    onAnswer(skipped ? { skipped: true, listened } : { v: pt!.v, a: pt!.a, listened });
+    onAnswer(skipped ? { skipped: true, listened, lyrics: openedLyrics } : { v: pt!.v, a: pt!.a, listened, lyrics: openedLyrics });
   };
 
   return (
@@ -199,6 +201,9 @@ function TrialView({ n, total, song, onAnswer }: {
         <div className="meta">
           <p className="title">{song.title}</p>
           <p className="artist">{song.artist}</p>
+          {/* Lyrics are linked, never shown here (they're copyrighted); whether someone opened them is recorded. */}
+          <a className="lyrics" href={`https://genius.com/search?q=${encodeURIComponent(`${song.artist} ${song.title}`)}`}
+            target="_blank" rel="noopener noreferrer" onClick={() => setOpenedLyrics(true)}>Read the lyrics ↗</a>
           <p className="status" aria-live="polite">
             {src === undefined ? "Finding the clip…" : src === null ? "This clip won't load. Tap Skip below."
               : heardEnough ? "Place it on the grid when you're ready." : playing ? "Listening…" : "Press play to hear the clip."}

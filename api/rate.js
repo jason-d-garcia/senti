@@ -19,7 +19,7 @@ async function redis(commands) {
   return (await r.json()).map((x) => x.result);
 }
 
-const COLUMNS = ["rater", "half", "trial", "song", "repeat", "v", "a", "skipped", "listened_s", "with_lyrics", "t"];
+const COLUMNS = ["rater", "half", "trial", "song", "repeat", "v", "a", "skipped", "listened_s", "opened_lyrics", "t"];
 const csvCell = (x) => (typeof x === "string" && /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x ?? "");
 
 export async function GET(request) {
@@ -57,7 +57,7 @@ export async function POST(request) {
   const row = {
     rater: b.rater, half: b.half === 0 || b.half === 1 ? b.half : null, trial: b.trial, song: b.song, repeat: !!b.repeat, skipped,
     v: skipped ? null : +b.v.toFixed(3), a: skipped ? null : +b.a.toFixed(3),
-    listened_s: typeof b.listened === "number" ? Math.round(b.listened) : null, with_lyrics: false, t: Date.now(),
+    listened_s: typeof b.listened === "number" ? Math.round(b.listened) : null, opened_lyrics: b.lyrics === true, t: Date.now(),
   };
   await redis([["RPUSH", "rate:log", JSON.stringify(row)]]);
   return json({ ok: true });

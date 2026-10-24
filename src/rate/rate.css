@@ -40,6 +40,8 @@ button { font: inherit; }
 .meta p { margin: 0; }
 .title { font: 700 1.15rem/1.25 var(--font-body); overflow-wrap: anywhere; }
 .artist { color: var(--dim); }
+.lyrics { display: inline-block; color: var(--accent); font-size: 0.9rem; font-weight: 600; text-decoration: none; padding: 4px 0; }
+.lyrics:hover, .lyrics:focus-visible { text-decoration: underline; }
 .status { color: var(--dim); font-size: 0.9rem; margin-top: 2px !important; }
 
 /* The grid: a plain square, axis ends named outside it, no emotion words. */
