@@ -144,7 +144,7 @@ export function Rate() {
         </ul>
         <p>Rate the mood the song puts across, not how it makes you feel. A sad song you love still goes on the negative side.</p>
         <p>There are no right answers. Go with your first instinct, and judge the song as you hear it, not what you know about it. Headphones help.</p>
-        <p className="dim">Your progress is saved on this device, so you can take a break and come back.</p>
+        <p className="dim">Your progress is saved in this browser, so you can take a break and come back. <b>Don't use a private or incognito tab, and finish on the same phone or computer and the same browser</b>, or you'll lose your place and have to start over.</p>
         <button type="button" className="primary" onClick={start} disabled={starting}>Start</button>
       </main>
     );
