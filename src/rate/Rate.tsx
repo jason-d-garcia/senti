@@ -113,7 +113,7 @@ export function Rate() {
       <main className="rate intro">
         <h1>Before you start</h1>
         <p>This is a short listening study for senti, a music app, to see how people hear the mood of songs
-          and how close the app gets. It takes about 20 minutes and pays $5.</p>
+          and how close the app gets. It takes about 20 minutes, and you get $5, paid through Venmo, when you finish.</p>
         <ul>
           <li>Taking part is voluntary. You can stop at any point.</li>
           <li>You must be 18 or older.</li>
@@ -121,7 +121,7 @@ export function Rate() {
             Results are only reported as group averages.</li>
           <li>If you request the $5 on Venmo with your code, the person running the study will see your Venmo name next to
             that code. It won't be shared or connected to your answers in anything that's shown.</li>
-          <li>To have your answers deleted at any time, message your code to the person who shared this link with you.</li>
+          <li>Questions, or want your answers deleted at any time? Email <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your code.</li>
         </ul>
         <label className="tick">
           <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
@@ -155,8 +155,9 @@ export function Rate() {
       <main className="rate intro">
         <h1>All done. Thank you!</h1>
         <p>Your completion code is <b className="code">{progress.rater}</b></p>
-        <p>To get <b>$5</b> for your time, send a Venmo request to <b>@jasondgarcia</b> with this code in the note.
+        <p>You get <b>$5</b> for your time through Venmo: send a request to <b>@jasondgarcia</b> with this code in the note.
           Each code is checked against the results before paying.</p>
+        <p className="dim">Questions, or want your answers deleted? Email <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your code.</p>
         {progress.unsent.length > 0 && <p className="note">{progress.unsent.length} answers are still sending. Keep this page open for a moment.</p>}
       </main>
     );
