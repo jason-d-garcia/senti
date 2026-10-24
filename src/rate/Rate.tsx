@@ -131,8 +131,10 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>Before you start</h1>
-        <p>This is a short listening study for senti, a music app, to see how people hear the mood of songs
-          and how close the app gets. It takes about 20 minutes, and you get $5, paid through Venmo, when you finish.</p>
+        <p>This is a short listening study for senti. We want to learn how people hear the mood of songs, so we can measure
+          and calibrate how well our model places them. It takes about 20 minutes.</p>
+        <p><b>You get $5 through Venmo only if you finish all the songs.</b> Stopping partway is completely fine, but isn't
+          paid.</p>
         <ul>
           <li>Taking part is voluntary. You can stop at any point.</li>
           <li>You must be 18 or older.</li>
