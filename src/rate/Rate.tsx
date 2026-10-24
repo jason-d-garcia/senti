@@ -112,16 +112,16 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>Before you start</h1>
-        <p>This is a short listening study for senti, a music app made by Jason, to see how people hear the mood of songs
+        <p>This is a short listening study for senti, a music app, to see how people hear the mood of songs
           and how close the app gets. It takes about 20 minutes and pays $5.</p>
         <ul>
           <li>Taking part is voluntary. You can stop at any point.</li>
           <li>You must be 18 or older.</li>
           <li>We save only where you place each song and how long you listened, under a random code, never your name.
             Results are only reported as group averages.</li>
-          <li>If you request the $5 on Venmo with your code, Jason will see your Venmo name next to that code. He won't
-            share it or connect it to your answers in anything he shows.</li>
-          <li>To have your answers deleted at any time, message Jason your code.</li>
+          <li>If you request the $5 on Venmo with your code, the person running the study will see your Venmo name next to
+            that code. It won't be shared or connected to your answers in anything that's shown.</li>
+          <li>To have your answers deleted at any time, message your code to the person who shared this link with you.</li>
         </ul>
         <label className="tick">
           <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
@@ -156,7 +156,7 @@ export function Rate() {
         <h1>All done. Thank you!</h1>
         <p>Your completion code is <b className="code">{progress.rater}</b></p>
         <p>To get <b>$5</b> for your time, send a Venmo request to <b>@jasondgarcia</b> with this code in the note.
-          Jason checks each code against the results before paying.</p>
+          Each code is checked against the results before paying.</p>
         {progress.unsent.length > 0 && <p className="note">{progress.unsent.length} answers are still sending. Keep this page open for a moment.</p>}
       </main>
     );
