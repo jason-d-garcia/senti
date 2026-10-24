@@ -175,8 +175,8 @@ export function Rate() {
         <h1>Practice done</h1>
         <p>That's how it works. Now the {progress.plan.length} songs that count. Same as before: place the mood the song puts
           across, and go with your first instinct.</p>
-        <p>Your code is <b className="code">{progress.rater}</b>. It stays at the top of the screen; jot it down if you're in a
-          private window, since closing one forgets where you were.</p>
+        <p>Your code is <b className="code">{progress.rater}</b>. It stays at the top of the screen. Jot it down in case you lose
+          your place, so you can still claim your $5.</p>
         <button type="button" className="primary" onClick={begin}>Start the real songs</button>
       </main>
     );
