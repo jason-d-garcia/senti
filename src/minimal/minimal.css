@@ -235,7 +235,8 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
 /* Bigger while it follows the pointer, and when hovering a dropped light that can be picked up. */
 .light.is-selected, .light.is-hover { transform: none; }
 .field.over-light { cursor: grab; }
-.light.is-dim { opacity: 0.35; }
+/* Hidden while someone places a song, so the spot it came from doesn't pull their answer towards it. */
+.light.is-dim { opacity: 0; }
 .ghost-ring {
   position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
   border: 1px solid rgba(232, 236, 248, 0.45); pointer-events: none;
