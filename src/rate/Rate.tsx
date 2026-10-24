@@ -29,8 +29,12 @@ interface Progress {
   payCode?: string;
   /** Whether a paid spot was held for them when they started (there are a fixed number). */
   heldSpot?: boolean;
+  /** Started from the unpaid link (?volunteer): saved like any run, but no paid spot and no payment code. */
+  volunteer?: boolean;
+  /** Optional, self-reported; sent with each answer. */
+  age?: string; gender?: string;
 }
-interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; consent?: boolean; known?: boolean; noVocals?: boolean; active?: number }
+interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; consent?: boolean; known?: boolean; noVocals?: boolean; active?: number; volunteer?: boolean; age?: string; gender?: string }
 
 /** Two unscored warm-up songs (not in the study) with an obvious mood, so people learn the grid before it counts. */
 const PRACTICE: StudySong[] = [
@@ -42,6 +46,10 @@ const PRACTICE: StudySong[] = [
       "https://music.apple.com/us/album/crying/388154437?i=388154726&uo=4", ""] },
 ];
 type Pt = { v: number; a: number };
+/** The unpaid link, playsenti.com/rate/?volunteer (read before ?fresh tidies the address). */
+const VOLUNTEER = new URLSearchParams(window.location.search).has("volunteer");
+const AGES = ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"];
+const GENDERS: [string, string][] = [["woman", "Woman"], ["man", "Man"], ["another", "Another gender"]];
 
 function load(): Progress | null {
   try {
@@ -102,7 +110,7 @@ export function Rate() {
   // Once every answer has arrived, ask for a payment code (a separate code, not linked to the answers).
   const [payError, setPayError] = useState<string | null>(null);
   useEffect(() => {
-    if (!progress || progress.fun || progress.done < progress.plan.length || progress.payCode || progress.unsent.length) return;
+    if (!progress || progress.fun || progress.volunteer || progress.done < progress.plan.length || progress.payCode || progress.unsent.length) return;
     let cancelled = false;
     (async () => {
       try {
@@ -127,6 +135,8 @@ export function Rate() {
   const [agreed, setAgreed] = useState(false);
   const [fun, setFun] = useState(false);
   const [consented, setConsented] = useState(false);
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
   const start = async () => {
     if (!songs || starting) return;
     setStarting(true);
@@ -140,18 +150,20 @@ export function Rate() {
     const rater = newRaterCode();
     // Hold one of the paid spots for this run, if any are left (not for a just-for-fun run).
     let heldSpot = false;
-    if (!fun) try {
+    if (!fun && !VOLUNTEER) try {
       const r = await fetch("/api/rate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reserve: rater }) });
       heldSpot = !!(await r.json()).reserved;
     } catch { /* offline: they can still be paid at the end if a spot is free */ }
-    const p: Progress = { version: listVersion, rater, half, plan: makePlan(ids, Math.random, new Set([...songs.values()].filter((s) => s.instrumental).map((s) => s.id))), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false, heldSpot, ...(fun ? { fun: true, funAnswers: [] } : {}) };
+    const p: Progress = { version: listVersion, rater, half, plan: makePlan(ids, Math.random, new Set([...songs.values()].filter((s) => s.instrumental).map((s) => s.id))), done: 0, unsent: [], consented: Date.now(), practiced: 0, begun: false, heldSpot, ...(fun ? { fun: true, funAnswers: [] } : {}),
+      ...(VOLUNTEER && !fun ? { volunteer: true } : {}), ...(!fun && age ? { age } : {}), ...(!fun && gender ? { gender } : {}) };
     save(p); setProgress(p);
   };
 
   const answer = async (r: Omit<Rating, "rater" | "half" | "trial" | "song" | "repeat">) => {
     if (!progress) return;
     const t = progress.plan[progress.done];
-    const rating: Rating = { rater: progress.rater, half: progress.half, trial: progress.done, song: t.id, repeat: t.repeat, consent: true, ...r };
+    const rating: Rating = { rater: progress.rater, half: progress.half, trial: progress.done, song: t.id, repeat: t.repeat, consent: true,
+      ...(progress.volunteer ? { volunteer: true } : {}), ...(progress.age ? { age: progress.age } : {}), ...(progress.gender ? { gender: progress.gender } : {}), ...r };
     const next: Progress = { ...progress, done: progress.done + 1 };
     // Kept on this device too, for the summary at the end.
     if (r.v !== undefined && r.a !== undefined && !t.repeat) next.funAnswers = [...(progress.funAnswers ?? []), { id: t.id, v: r.v, a: r.a }];
@@ -169,7 +181,9 @@ export function Rate() {
         <h1>Before you start</h1>
         <p>This is a short listening study for senti. We want to learn how people hear the mood of songs, so we can measure
           and calibrate how well our model places them. It takes about 20 to 25 minutes.</p>
-        {spotsLeft === 0 ? (
+        {VOLUNTEER ? (
+          <p><b>This is the unpaid version of the study.</b> Thank you for volunteering your time: every answer helps.</p>
+        ) : spotsLeft === 0 ? (
           <p><b>We've reached our limit of paid participants,</b> so this study is no longer paid. You're very welcome to take
             part for fun, though: every answer still helps.</p>
         ) : (<>
@@ -182,10 +196,10 @@ export function Rate() {
         <ul>
           <li>Taking part is voluntary. You can stop at any point.</li>
           <li>You must be 18 or older.</li>
-          <li>We save only where you place each song and how long you listened, under a random code, never your name.
-            Results are only reported as group averages.</li>
-          <li>At the end you get a separate payment code for the Venmo request. It isn't linked to your answers, so your Venmo
-            name can't be matched to how you rated.</li>
+          <li>We save only where you place each song, how long you listened, and your age range and gender if you choose to
+            share them, under a random code, never your name. Results are only reported as group averages.</li>
+          {!VOLUNTEER && <li>At the end you get a separate payment code for the Venmo request. It isn't linked to your answers, so your Venmo
+            name can't be matched to how you rated.</li>}
           <li>Questions, or want your answers deleted at any time? Email <a href="mailto:study@playsenti.com">study@playsenti.com</a> with your code.</li>
         </ul>
         <label className="tick">
@@ -215,6 +229,23 @@ export function Rate() {
         <p>There are no right answers. Go with your first instinct, and judge the song as you hear it, not what you know about it. Headphones help.</p>
         <p><b>You don't need to hear the whole clip.</b> 10 to 15 seconds is usually enough to judge the mood; listen longer
           only if you're unsure.</p>
+        {!fun && (
+          <fieldset className="about-you">
+            <legend>About you <span className="dim">(optional)</span></legend>
+            <label>Age
+              <select value={age} onChange={(e) => setAge(e.target.value)}>
+                <option value="">Prefer not to say</option>
+                {AGES.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+            <label>Gender
+              <select value={gender} onChange={(e) => setGender(e.target.value)}>
+                <option value="">Prefer not to say</option>
+                {GENDERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </label>
+          </fieldset>
+        )}
         <p className="dim">Your progress is saved in this browser, so you can take a break and come back. <b>Don't use a private or incognito tab, and finish on the same phone or computer and the same browser</b>, or you'll lose your place and have to start over.</p>
         <button type="button" className="primary" onClick={start} disabled={starting}>Start</button>
       </main>
@@ -225,7 +256,9 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>All done. Thank you!</h1>
-        {progress.fun ? null : progress.payCode ? (
+        {progress.fun ? null : progress.volunteer ? (
+          <p className="note">Your answers are saved. Thank you for volunteering!</p>
+        ) : progress.payCode ? (
           <>
             <p>Your payment code is <b className="code">{progress.payCode}</b></p>
             <p>You get <b>$5</b> for your time through Venmo: send a request to <b>@jasondgarcia</b> with this payment code in
