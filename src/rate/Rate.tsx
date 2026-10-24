@@ -80,6 +80,7 @@ export function Rate() {
 
   const [starting, setStarting] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [consented, setConsented] = useState(false);
   const start = async () => {
     if (!songs || starting) return;
     setStarting(true);
@@ -106,10 +107,35 @@ export function Rate() {
   if (loadError) return <main className="rate"><p className="note">Couldn't load the study. Check your connection and refresh.</p></main>;
   if (!songs) return <main className="rate" aria-busy="true" />;
 
+  // First a consent screen of its own; ticking the box and continuing leads to the instructions.
+  if (!progress && !consented) {
+    return (
+      <main className="rate intro">
+        <h1>Before you start</h1>
+        <p>This is a short listening study for senti, a music app made by Jason, to see how people hear the mood of songs
+          and how close the app gets. It takes about 20 minutes and pays $5.</p>
+        <ul>
+          <li>Taking part is voluntary. You can stop at any point.</li>
+          <li>You must be 18 or older.</li>
+          <li>We save only where you place each song and how long you listened, under a random code, never your name.
+            Results are only reported as group averages.</li>
+          <li>If you request the $5 on Venmo with your code, Jason will see your Venmo name next to that code. He won't
+            share it or connect it to your answers in anything he shows.</li>
+          <li>To have your answers deleted at any time, message Jason your code.</li>
+        </ul>
+        <label className="tick">
+          <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+          <span>I'm 18 or older, I've read this, and I agree to take part.</span>
+        </label>
+        <button type="button" className="primary" onClick={() => setConsented(true)} disabled={!agreed}>Continue</button>
+      </main>
+    );
+  }
+
   if (!progress) {
     return (
       <main className="rate intro">
-        <h1>senti listening study</h1>
+        <h1>How it works</h1>
         <p>You'll hear {songs.size / 2 + 4} short song clips, about 20 minutes in all, after {PRACTICE.length} practice songs that don't count.</p>
         <p>For each one, tap the grid where the <b>song's mood</b> belongs:</p>
         <ul>
@@ -119,20 +145,7 @@ export function Rate() {
         <p>Rate the mood the song puts across, not how it makes you feel. A sad song you love still goes on the negative side.</p>
         <p>There are no right answers. Go with your first instinct, and judge the song as you hear it, not what you know about it. Headphones help.</p>
         <p className="dim">Your progress is saved on this device, so you can take a break and come back.</p>
-        <section className="consent" aria-labelledby="consent-h">
-          <h2 id="consent-h">Before you start</h2>
-          <p>This is a small study by Jason Garcia for senti, a music app, to see how people hear the mood of songs and how
-            close the app's model gets. Taking part is voluntary: you can stop at any point, and you must be 18 or older.</p>
-          <p>We save only where you place each song and how long you listened, under a random code, never your name.
-            Results are only ever reported as group averages. If you request the $5 on Venmo with your code, Jason will
-            see your Venmo name next to that code; he won't share it or connect it to your answers in anything he shows.
-            To have your answers deleted, message Jason your code.</p>
-          <label className="tick">
-            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-            <span>I'm 18 or older, I've read this, and I agree to take part.</span>
-          </label>
-        </section>
-        <button type="button" className="primary" onClick={start} disabled={starting || !agreed}>Start</button>
+        <button type="button" className="primary" onClick={start} disabled={starting}>Start</button>
       </main>
     );
   }
