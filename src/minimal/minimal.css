@@ -302,7 +302,8 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   background: rgba(5, 6, 11, 0.85); color: var(--glow); font-size: 0.7rem; padding-left: 2px;
 }
 .solid { background: var(--ink); color: #05060b; border: 1px solid transparent; }
-.solid:hover { box-shadow: 0 0 18px -4px var(--glow); }
+.solid:hover:not(:disabled) { box-shadow: 0 0 18px -4px var(--glow); }
+.solid:disabled { opacity: 0.4; cursor: default; }
 .ghost:focus-visible, .solid:focus-visible, .thumb:focus-visible, .cover:focus-visible, .close:focus-visible, .links a:focus-visible {
   outline: 2px solid var(--ink); outline-offset: 2px;
 }

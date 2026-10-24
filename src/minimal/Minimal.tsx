@@ -141,6 +141,8 @@ export default function Minimal() {
   const [notFound, setNotFound] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [placeAt, setPlaceAt] = useState<Pt>(dot);
+  /** Whether they've moved the marker since it appeared; the centre start isn't an answer by itself. */
+  const [placeMoved, setPlaceMoved] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [placePinned, setPlacePinned] = useState(false);
   /** Zoomed-in view: where it's centred, which emotion's songs get covers, and the zoom (fixed once opened). */
@@ -264,7 +266,7 @@ export default function Minimal() {
   };
   const thumbsUp = () => { vote(true); setPick((p) => p && { ...p, step: "thanks" }); };
   // The marker starts in the centre, not at the model's spot, so where people put the song isn't pulled towards it.
-  const thumbsDown = () => { setDiscover(null); setPlaceAt({ valence: 0, arousal: 0 }); setPlacePinned(false); setPick((p) => p && { ...p, step: "place" }); };
+  const thumbsDown = () => { setDiscover(null); setPlaceAt({ valence: 0, arousal: 0 }); setPlaceMoved(false); setPlacePinned(false); setPick((p) => p && { ...p, step: "place" }); };
   const savePlace = () => { vote(false, placeAt); setPick((p) => p && { ...p, step: "placed" }); };
   const skipPlace = () => { vote(false); setPick((p) => p && { ...p, step: "placed" }); };
   const card = useRef<HTMLDivElement>(null);
@@ -462,7 +464,7 @@ export default function Minimal() {
             color={color}
             pinned={placing ? placePinned : pinned}
             onPin={placing ? setPlacePinned : setPinned}
-            placing={placing ? { at: placeAt, artwork: pick!.preview.artworkUrl, onMove: setPlaceAt } : undefined}
+            placing={placing ? { at: placeAt, artwork: pick!.preview.artworkUrl, onMove: (p: Pt) => { setPlaceAt(p); setPlaceMoved(true); } } : undefined}
             surface={stage}
             zoom={discover && view ? { center: discover.center, scale: view.scale, songs: fieldSongs, onSong: playNearby, onPan: panTo, onPanLive: setLivePan } : null}
           />
@@ -481,10 +483,10 @@ export default function Minimal() {
           <div className={`dock${!pinned && !placing ? " is-collapsed" : ""}`} ref={dock} aria-hidden={discover ? true : undefined}>
             {placing ? (
               <div className="place-bar">
-                <p>{TOUCH ? "Tap" : "Click"} where <b>{pick!.song.title}</b> belongs: <span style={{ color: COLOR[emotionAt(placeAt.valence, placeAt.arousal)?.mood ?? "mixed"] }}>{sectionOf(placeAt)}</span></p>
+                <p>{TOUCH ? "Tap" : "Click"} where <b>{pick!.song.title}</b> belongs{placeMoved && <>: <span style={{ color: COLOR[emotionAt(placeAt.valence, placeAt.arousal)?.mood ?? "mixed"] }}>{sectionOf(placeAt)}</span></>}</p>
                 <div className="row">
                   <button type="button" className="ghost" onClick={skipPlace}>Skip</button>
-                  <button type="button" className="solid" onClick={savePlace}>Save</button>
+                  <button type="button" className="solid" onClick={savePlace} disabled={!placeMoved}>Save</button>
                 </div>
               </div>
             ) : (
