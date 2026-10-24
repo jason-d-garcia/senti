@@ -24,7 +24,7 @@ async function redis(commands) {
   return (await r.json()).map((x) => x.result);
 }
 
-const COLUMNS = ["rater", "half", "trial", "song", "repeat", "v", "a", "skipped", "listened_s", "with_lyrics", "consent", "known", "t"];
+const COLUMNS = ["rater", "half", "trial", "song", "repeat", "v", "a", "skipped", "listened_s", "with_lyrics", "consent", "known", "no_vocals", "active_s", "t"];
 const csvCell = (x) => (typeof x === "string" && /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x ?? "");
 
 // Paid spots: at most PAID_SPOTS payment codes ever. Starting the study holds a spot (POST { reserve }), so nobody who
@@ -122,7 +122,8 @@ export async function POST(request) {
   const row = {
     rater: b.rater, half: b.half === 0 || b.half === 1 ? b.half : null, trial: b.trial, song: b.song, repeat: !!b.repeat, skipped,
     v: skipped ? null : +b.v.toFixed(3), a: skipped ? null : +b.a.toFixed(3),
-    listened_s: typeof b.listened === "number" ? Math.round(b.listened) : null, with_lyrics: false, consent: b.consent === true, known: b.known === true, t: Date.now(),
+    listened_s: typeof b.listened === "number" ? Math.round(b.listened) : null, with_lyrics: false, consent: b.consent === true, known: b.known === true, no_vocals: b.noVocals === true,
+    active_s: typeof b.active === "number" && Number.isFinite(b.active) ? Math.round(Math.min(Math.max(b.active, 0), 600)) : null, t: Date.now(),
   };
   await redis([["RPUSH", "rate:log", JSON.stringify(row)], ["INCR", `rate:count:${b.rater}`],
     ["ZADD", "rate:hold", "XX", Date.now() + HOLD_MS, b.rater]]);

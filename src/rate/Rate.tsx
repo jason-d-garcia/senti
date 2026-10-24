@@ -24,7 +24,7 @@ interface Progress {
   /** Whether a paid spot was held for them when they started (there are a fixed number). */
   heldSpot?: boolean;
 }
-interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; consent?: boolean; known?: boolean }
+interface Rating { rater: string; half: number; trial: number; song: string; repeat: boolean; v?: number; a?: number; skipped?: boolean; listened: number; consent?: boolean; known?: boolean; noVocals?: boolean; active?: number }
 
 /** Two unscored warm-up songs (not in the study) with an obvious mood, so people learn the grid before it counts. */
 const PRACTICE: StudySong[] = [
@@ -258,7 +258,7 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
   n: number; total: number; song: StudySong; practice?: boolean;
   /** Shown throughout, so someone in a private window who closes it can still claim with the code they noted. */
   code?: string;
-  onAnswer: (r: { v?: number; a?: number; skipped?: boolean; listened: number; known?: boolean }) => void;
+  onAnswer: (r: { v?: number; a?: number; skipped?: boolean; listened: number; known?: boolean; noVocals?: boolean; active?: number }) => void;
 }) {
   const audio = useRef<HTMLAudioElement>(null);
   const grid = useRef<HTMLDivElement>(null);
@@ -269,6 +269,18 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
   const [pt, setPt] = useState<Pt | null>(null);
   const [busy, setBusy] = useState(false);
   const [known, setKnown] = useState(false);
+  const [noVocals, setNoVocals] = useState(false);
+  // Active time on this song: seconds the page was actually on screen, capped so a tab left open doesn't count.
+  const active = useRef(0);
+  useEffect(() => {
+    let last = performance.now();
+    const id = setInterval(() => {
+      const now = performance.now();
+      if (document.visibilityState === "visible") active.current = Math.min(active.current + (now - last) / 1000, 600);
+      last = now;
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Songs without a stored preview are looked up when they come up.
   useEffect(() => {
@@ -307,7 +319,8 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
     if (busy) return;
     setBusy(true);
     audio.current?.pause();
-    onAnswer(skipped ? { skipped: true, listened, known } : { v: pt!.v, a: pt!.a, listened, known });
+    const extra = { listened, known, noVocals, active: Math.round(active.current) };
+    onAnswer(skipped ? { skipped: true, ...extra } : { v: pt!.v, a: pt!.a, ...extra });
   };
 
   return (
@@ -350,6 +363,9 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
 
       <label className="known">
         <input type="checkbox" checked={known} onChange={(e) => setKnown(e.target.checked)} /> I already know this song
+      </label>
+      <label className="known">
+        <input type="checkbox" checked={noVocals} onChange={(e) => setNoVocals(e.target.checked)} /> No singing in this clip
       </label>
       <div className="actions">
         {/* Skipping is only for a clip that won't play, so people can't skip songs they find hard to place. */}
