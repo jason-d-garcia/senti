@@ -207,7 +207,8 @@ function TrialView({ n, total, song, onAnswer }: {
       </div>
 
       <div className="actions">
-        <button type="button" className="link" onClick={() => submit(true)} disabled={busy}>Skip</button>
+        {/* Skipping is only for a clip that won't play, so people can't skip songs they find hard to place. */}
+        {src === null ? <button type="button" className="link" onClick={() => submit(true)} disabled={busy}>Skip</button> : <span />}
         <button type="button" className="primary" onClick={() => submit(false)} disabled={!pt || !heardEnough || busy}>
           {!heardEnough && src ? `Listen a little longer (${Math.max(1, Math.ceil(MIN_LISTEN - listened))}s)` : "Next"}
         </button>
