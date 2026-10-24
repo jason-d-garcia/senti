@@ -263,7 +263,8 @@ export default function Minimal() {
     });
   };
   const thumbsUp = () => { vote(true); setPick((p) => p && { ...p, step: "thanks" }); };
-  const thumbsDown = () => { setDiscover(null); setPlaceAt(dot); setPlacePinned(false); setPick((p) => p && { ...p, step: "place" }); };
+  // The marker starts in the centre, not at the model's spot, so where people put the song isn't pulled towards it.
+  const thumbsDown = () => { setDiscover(null); setPlaceAt({ valence: 0, arousal: 0 }); setPlacePinned(false); setPick((p) => p && { ...p, step: "place" }); };
   const savePlace = () => { vote(false, placeAt); setPick((p) => p && { ...p, step: "placed" }); };
   const skipPlace = () => { vote(false); setPick((p) => p && { ...p, step: "placed" }); };
   const card = useRef<HTMLDivElement>(null);
