@@ -19,7 +19,8 @@ import { emotionAt, EMOTIONS } from "../src/mood";
 import { isMatch } from "../src/preview";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CACHE = join(ROOT, "data", "previews.jsonl");
+// PREVIEWS_CACHE lets a long prefetch write outside the git checkout, so pulls never trip over the growing file.
+const CACHE = process.env.PREVIEWS_CACHE ?? join(ROOT, "data", "previews.jsonl");
 const OUT = join(ROOT, "public", "songs");
 const GAP_MS = 4000;
 

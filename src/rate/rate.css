@@ -34,6 +34,7 @@ button { font: inherit; }
 
 .trial { gap: 16px; }
 .top { display: flex; align-items: center; gap: 12px; color: var(--dim); font-size: 0.9rem; }
+.mycode { font-size: 0.85rem; white-space: nowrap; }
 .bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(160, 175, 220, 0.14); overflow: hidden; }
 .bar span { display: block; height: 100%; background: var(--accent); transition: width 300ms ease; }
 

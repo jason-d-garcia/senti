@@ -162,6 +162,8 @@ export function Rate() {
         <h1>Practice done</h1>
         <p>That's how it works. Now the {progress.plan.length} songs that count. Same as before: place the mood the song puts
           across, and go with your first instinct.</p>
+        <p>Your code is <b className="code">{progress.rater}</b>. It stays at the top of the screen; jot it down if you're in a
+          private window, since closing one forgets where you were.</p>
         <button type="button" className="primary" onClick={begin}>Start the real songs</button>
       </main>
     );
@@ -178,11 +180,13 @@ export function Rate() {
       </main>
     );
   }
-  return <TrialView key={progress.done} n={progress.done} total={progress.plan.length} song={song} onAnswer={answer} />;
+  return <TrialView key={progress.done} n={progress.done} total={progress.plan.length} song={song} code={progress.rater} onAnswer={answer} />;
 }
 
-function TrialView({ n, total, song, practice = false, onAnswer }: {
+function TrialView({ n, total, song, practice = false, code, onAnswer }: {
   n: number; total: number; song: StudySong; practice?: boolean;
+  /** Shown throughout, so someone in a private window who closes it can still claim with the code they noted. */
+  code?: string;
   onAnswer: (r: { v?: number; a?: number; skipped?: boolean; listened: number; known?: boolean }) => void;
 }) {
   const audio = useRef<HTMLAudioElement>(null);
@@ -240,6 +244,7 @@ function TrialView({ n, total, song, practice = false, onAnswer }: {
       <div className="top">
         <span className="count">{practice ? `Practice song ${n + 1} of ${total} · not counted` : `Song ${n + 1} of ${total}`}</span>
         <span className="bar" aria-hidden="true"><span style={{ width: `${(n / total) * 100}%` }} /></span>
+        {code && <span className="mycode" title="Your completion code">Code <b className="code">{code}</b></span>}
       </div>
       <div className="song">
         <button type="button" className="play" onClick={toggle} disabled={!src} aria-label={playing ? "Pause" : "Play"}>
