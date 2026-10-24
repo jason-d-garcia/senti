@@ -97,7 +97,9 @@ export function Rate() {
     return (
       <main className="rate intro">
         <h1>All done. Thank you!</h1>
-        <p>Your code is <b className="code">{progress.rater}</b>. Send it to Jason so he knows you finished.</p>
+        <p>Your completion code is <b className="code">{progress.rater}</b></p>
+        <p>To get <b>$5</b> for your time, send a Venmo request to <b>@jasondgarcia</b> with this code in the note.
+          Jason checks each code against the results before paying.</p>
         {progress.unsent.length > 0 && <p className="note">{progress.unsent.length} answers are still sending. Keep this page open for a moment.</p>}
       </main>
     );
