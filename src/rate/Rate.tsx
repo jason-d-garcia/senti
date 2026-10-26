@@ -359,6 +359,7 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
   const grid = useRef<HTMLDivElement>(null);
   const [src, setSrc] = useState<string | null | undefined>(song.preview?.[0]);
   const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [listened, setListened] = useState(0);
   const [ended, setEnded] = useState(false);
   const [pt, setPt] = useState<Pt | null>(null);
@@ -385,11 +386,17 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
     return () => { cancelled = true; };
   }, [song, src]);
 
-  // Count only time actually heard.
+  // Count only time actually heard: follow the clip's own position, so time spent loading or buffering doesn't count.
+  // (The step is worked out before setListened: an updater that read a changing variable could run late and count 0.)
   useEffect(() => {
-    if (!playing) return;
-    let last = performance.now();
-    const id = setInterval(() => { const now = performance.now(); setListened((s) => s + (now - last) / 1000); last = now; }, 250);
+    const el = audio.current;
+    if (!playing || !el) return;
+    let last = el.currentTime;
+    const id = setInterval(() => {
+      const now = el.currentTime, step = now - last;
+      last = now;
+      if (step > 0 && step < 2) setListened((s) => s + step);
+    }, 200);
     return () => clearInterval(id);
   }, [playing]);
 
@@ -435,10 +442,11 @@ function TrialView({ n, total, song, practice = false, code, onAnswer }: {
           <p className="artist">{song.artist}</p>
           <p className="status" aria-live="polite">
             {src === undefined ? "Finding the clip…" : src === null ? "This clip won't load. Tap Skip below."
-              : heardEnough ? "Place it on the grid when you're ready." : playing ? "Listening… (10–15 seconds is usually enough)" : "Press play to hear the clip."}
+              : heardEnough ? "Place it on the grid when you're ready." : playing && loading ? "Loading the clip…" : playing ? "Listening… (10–15 seconds is usually enough)" : "Press play to hear the clip."}
           </p>
         </div>
-        {src && <audio ref={audio} src={src} preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
+        {src && <audio ref={audio} src={src} preload="auto" onPlay={() => { setPlaying(true); setLoading(true); }} onPlaying={() => setLoading(false)} onWaiting={() => setLoading(true)}
+          onPause={() => setPlaying(false)}
           onEnded={() => { setPlaying(false); setEnded(true); }} onError={() => setSrc(null)} />}
       </div>
 
