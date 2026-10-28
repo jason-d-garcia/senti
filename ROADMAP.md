@@ -30,4 +30,8 @@ where its songs sit.
   their mean.
 - **Retraining from listener votes and placements:** see Listener ratings in the README.
 - **First-visit hint:** a prompt to click and drop the light, if testers don't find it.
+- **Lyric arc in "Why here?":** score each song's overlapping 160-token windows separately
+  (`scripts/score_windows.py` → `data/catalog_lyric_arc.csv`, 8 buckets per axis), carry it as an optional 10th shard
+  field and draw a small sparkline ("turns darker toward the end"). Scores only, no lyric text. Needs the lyrics and
+  the model checkpoint, so it runs on Jason's Mac.
 - **Imports:** Last.fm import of a listener's top tracks, and Spotify for allow-listed testers only.

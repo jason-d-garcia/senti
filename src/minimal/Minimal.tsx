@@ -341,6 +341,12 @@ export default function Minimal() {
   const [why, setWhy] = useState(false);
   const pickEmotion = pick ? emotionAt(pick.song.valence, pick.song.arousal) : null;
   const pickColor = COLOR[pickEmotion?.mood ?? "mixed"];
+  // Opening it brings the panel into view (the card scrolls on phones); focus stays on the chip.
+  useEffect(() => {
+    if (!why) return;
+    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById("why-panel")?.scrollIntoView({ block: "nearest", behavior: smooth ? "smooth" : "auto" });
+  }, [why]);
 
   // Discover: zoom in around the song, far enough that its nearest neighbours in the same emotion spread
   // across the view (songs cluster tightly), and show what else is nearby.
@@ -400,6 +406,13 @@ export default function Minimal() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [discover, featuredView]);
+
+  // Zoomed in with the panel open, the big map shows where the lyrics and the sound alone would put the song.
+  const trace = useMemo(() => {
+    const src = (pick?.song as CatalogSong | undefined)?.sources;
+    const shown = why && src?.audio && featuredView?.featured.find((f) => f.song.id === pick!.song.id);
+    return shown ? { lyrics: src.lyrics, audio: src.audio!, final: { valence: shown.v, arousal: shown.a } } : null;
+  }, [why, pick, featuredView]);
 
   const fieldSongs: FieldSong[] = nearby.map(({ song, featured, v, a }) => ({
     id: song.id, valence: v, arousal: a, title: `${song.title} · ${song.artist}`, featured,
@@ -492,6 +505,7 @@ export default function Minimal() {
             placing={placing ? { at: placeAt, artwork: pick!.preview.artworkUrl, onMove: (p: Pt) => { setPlaceAt(p); setPlaceMoved(true); } } : undefined}
             surface={stage}
             zoom={discover && view ? { center: discover.center, scale: view.scale, songs: fieldSongs, onSong: playNearby, onPan: panTo, onPanLive: setLivePan } : null}
+            trace={trace}
           />
 
           {discover && (
@@ -575,7 +589,7 @@ export default function Minimal() {
               </div>
             </div>
 
-            {why && <WhyHere key={pick.song.id} id="why-panel" song={pick.song} color={pickColor} />}
+            {why && <WhyHere key={pick.song.id} id="why-panel" song={pick.song} songs={songs} onPlay={playNearby} color={pickColor} />}
             {!discover && (
               <button type="button" className="discover-link" onClick={openDiscover}>
                 Discover more {sectionOf(pick.song).toLowerCase()} songs <span aria-hidden="true">→</span>

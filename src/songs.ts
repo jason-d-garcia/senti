@@ -13,9 +13,19 @@ export const sectionOf = (p: { valence: number; arousal: number }) => emotionAt(
 /** A song with its preview looked up ahead of time (no iTunes lookup needed to play it), and what placed it. */
 export type CatalogSong = PlacedSong & { preview?: Preview; sources?: Sources };
 
-type Row = [i: number, title: string, artist: string, valence: number, arousal: number, year: number, peak: number,
+export type Row = [i: number, title: string, artist: string, valence: number, arousal: number, year: number, peak: number,
   preview?: [audioUrl: string, pageUrl: string, artworkUrl: string] | null,
   scores?: [lyricsV: number, lyricsA: number, audioV: number, audioA: number]];
+
+/** One shard row as a song. Without audio scores the song sits where its lyrics put it. */
+export function parseRow([i, title, artist, valence, arousal, year, peak, pv, sc]: Row, fusion?: Fusion): CatalogSong {
+  const s: CatalogSong = placeSong({ title, artist, valence, arousal, year: year || undefined, peak_rank: peak || undefined }, i);
+  if (pv) s.preview = { audioUrl: pv[0], pageUrl: pv[1] || "https://music.apple.com", artworkUrl: pv[2] || undefined };
+  s.sources = sc && fusion
+    ? { lyrics: { valence: sc[0], arousal: sc[1] }, audio: { valence: sc[2], arousal: sc[3] }, fusion }
+    : { lyrics: { valence, arousal } };
+  return s;
+}
 
 const loaded = new Map<string, Promise<CatalogSong[]>>();
 
@@ -25,15 +35,7 @@ export function loadSection(name: string): Promise<CatalogSong[]> {
   if (p) return p;
   p = fetch(`/songs/${name.toLowerCase()}.json`)
     .then((r) => { if (!r.ok) throw new Error(`songs ${r.status}`); return r.json(); })
-    .then(({ songs, fusion }: { songs: Row[]; fusion?: Fusion }) => songs.map(([i, title, artist, valence, arousal, year, peak, pv, sc]) => {
-      const s: CatalogSong = placeSong({ title, artist, valence, arousal, year: year || undefined, peak_rank: peak || undefined }, i);
-      if (pv) s.preview = { audioUrl: pv[0], pageUrl: pv[1] || "https://music.apple.com", artworkUrl: pv[2] || undefined };
-      // Without audio scores the song sits where its lyrics put it.
-      s.sources = sc && fusion
-        ? { lyrics: { valence: sc[0], arousal: sc[1] }, audio: { valence: sc[2], arousal: sc[3] }, fusion }
-        : { lyrics: { valence, arousal } };
-      return s;
-    }))
+    .then(({ songs, fusion }: { songs: Row[]; fusion?: Fusion }) => songs.map((r) => parseRow(r, fusion)))
     .catch((e) => { loaded.delete(name); throw e; });
   loaded.set(name, p);
   return p;

@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { axisParts, driver, explain, fitWeights } from "./explain";
-import type { Fusion } from "./explain";
+import { axisParts, explain, fitWeights, nearestBy, verdict, verdictText } from "./explain";
+import type { Fusion, Sources } from "./explain";
+import scoresCsv from "../data/catalog_audio_scores.csv?raw";
 
 // The weights the live catalogue was blended with (see public/songs/*.json).
 const FUSION: Fusion = {
   valence: { lyrics: 0.6465, audio: 0.6114, bias: 0.0039 },
   arousal: { lyrics: 0.1402, audio: 1.0184, bias: -0.0194 },
 };
+const unit = { lyrics: 1, audio: 1, bias: 0 };
 
 describe("axisParts", () => {
   it("splits the blended score into lyrics and sound parts that add back up", () => {
@@ -22,33 +24,73 @@ describe("axisParts", () => {
   });
 });
 
+describe("verdict", () => {
+  const v = (l: number, a: number) => verdict(axisParts(l, a, unit));
+  it("is still when the pushes add up to less than 0.1", () => {
+    expect(v(0.05, 0.0499)).toBe("still");
+    expect(v(-0.06, 0.03)).toBe("still");
+    expect(v(0.05, 0.05)).not.toBe("still");
+  });
+  it("is a conflict when they pull opposite ways, each by at least 0.05", () => {
+    expect(v(0.3, -0.05)).toBe("conflict");
+    expect(v(-0.05, 0.3)).toBe("conflict");
+    // A small push the other way goes to the bigger one.
+    expect(v(0.3, -0.049)).toBe("lyrics");
+    expect(v(-0.049, 0.06)).toBe("sound");
+  });
+  it("says which one when it has 70% or more of the push", () => {
+    expect(v(0.7, 0.3)).toBe("lyrics");
+    expect(v(0.69, 0.31)).toBe("agree");
+    expect(v(0.3, 0.7)).toBe("sound");
+    expect(v(0.31, 0.69)).toBe("agree");
+  });
+  it("words a conflict by the stronger pull", () => {
+    expect(verdictText("valence", axisParts(0.6, -0.2, unit))).toBe("The lyrics pulled it toward feels good; the sound pulled it back.");
+    expect(verdictText("arousal", axisParts(0.1, -0.5, unit))).toBe("The sound pulled it toward low energy; the lyrics pulled it back.");
+    expect(verdictText("valence", axisParts(0.02, 0.01, unit))).toMatch(/near the middle/);
+  });
+});
+
 describe("explain", () => {
-  it("names both readings and who drove each axis", () => {
-    // Happy-sounding lyrics, a calm low-energy track.
+  it("names both readings", () => {
     const e = explain({ valence: 0.33, arousal: -0.35,
       sources: { lyrics: { valence: 0.7, arousal: 0.1 }, audio: { valence: -0.2, arousal: -0.35 }, fusion: FUSION } });
-    expect(e.summary).toMatch(/^The lyrics read as happy; the sound reads as /);
-    expect(e.summary).toContain("energy comes mostly from the sound");
-    expect(e.summary).toContain("feels comes mostly from the lyrics");
+    expect(e.summary).toMatch(/^The lyrics read as happy; the sound reads as \w+\.$/);
+    expect(e.valence && verdict(e.valence)).toBe("conflict");
+    expect(e.arousal && verdict(e.arousal)).toBe("sound");
   });
   it("says so when lyrics and sound agree", () => {
     const e = explain({ valence: 0.6, arousal: 0.05,
       sources: { lyrics: { valence: 0.6, arousal: 0.05 }, audio: { valence: 0.6, arousal: 0.05 }, fusion: FUSION } });
-    expect(e.summary).toMatch(/^The lyrics and the sound both read as happy\./);
+    expect(e.summary).toBe("The lyrics and the sound both read as happy.");
   });
   it("falls back to lyrics only without audio scores", () => {
-    const e = explain({ valence: -0.5, arousal: -0.5 });
+    const e = explain({ valence: -0.5, arousal: -0.5, sources: { lyrics: { valence: -0.5, arousal: -0.5 } } });
     expect(e.audio).toBeNull();
     expect(e.valence).toBeNull();
-    expect(e.summary).toMatch(/lyrics alone, which read as lethargic/);
+    expect(e.tagged).toBeUndefined();
+    expect(e.summary).toBe("Placed by its lyrics alone, which read as lethargic. The audio model hasn't heard this one yet.");
+  });
+  it("adds where the mood tags put a MERGE test song", () => {
+    const e = explain({ valence: 0.5, arousal: -0.5, true_valence: -0.5, true_arousal: -0.5 });
+    expect(e.tagged).toEqual({ valence: -0.5, arousal: -0.5 });
+    expect(e.summary).toMatch(/MERGE's mood tags put it in lethargic; our model put it in \w+\.$/);
+    expect(explain({ valence: -0.5, arousal: -0.5, true_valence: -0.45, true_arousal: -0.5 }).summary).toMatch(/in lethargic too\.$/);
   });
 });
 
-describe("driver", () => {
-  it("has a middle band", () => {
-    expect(driver(0.9)).toBe("mostly from the lyrics");
-    expect(driver(0.1)).toBe("mostly from the sound");
-    expect(driver(0.5)).toMatch(/about equally/);
+describe("nearestBy", () => {
+  const song = (id: string, l: number, a?: number) => ({ id, sources: {
+    lyrics: { valence: l, arousal: 0 }, ...(a !== undefined && { audio: { valence: a, arousal: 0 }, fusion: FUSION }) } as Sources });
+  const me = song("me", 0, 0);
+  const all = [me, song("a", 0.1, 0.9), song("b", 0.5, 0.05), song("c", -0.2), song("d", 0.9, -0.1), { id: "test" }];
+  it("finds the closest by one source, never the song itself", () => {
+    expect(nearestBy(me, all, "lyrics", 2).map((s) => s.id)).toEqual(["a", "c"]);
+    expect(nearestBy(me, all, "audio", 2).map((s) => s.id)).toEqual(["b", "d"]);
+  });
+  it("leaves out songs without that score", () => {
+    expect(nearestBy(me, all, "audio", 9).map((s) => s.id)).toEqual(["b", "d", "a"]);
+    expect(nearestBy(song("x", 0), all, "audio", 2)).toEqual([]);
   });
 });
 
@@ -63,5 +105,17 @@ describe("fitWeights", () => {
     expect(w.lyrics).toBeCloseTo(0.65, 6);
     expect(w.audio).toBeCloseTo(0.61, 6);
     expect(w.bias).toBeCloseTo(0.004, 6);
+  });
+  it("recovers the catalogue's weights from its scores", () => {
+    // The six score columns come last and are never quoted, so they can be split off the end of each line.
+    const rows = scoresCsv.trim().split("\n").slice(1)
+      .map((line) => line.split(",").slice(-6).map(Number));
+    expect(rows.length).toBeGreaterThan(2500);
+    for (const [axis, w] of [[0, FUSION.valence], [1, FUSION.arousal]] as const) {
+      const fit = fitWeights(rows.map((r) => [r[axis], r[axis + 2], r[axis + 4]]));
+      expect(Math.abs(fit.lyrics - w.lyrics)).toBeLessThan(1e-3);
+      expect(Math.abs(fit.audio - w.audio)).toBeLessThan(1e-3);
+      expect(Math.abs(fit.bias - w.bias)).toBeLessThan(1e-3);
+    }
   });
 });

@@ -39,6 +39,14 @@ arousal). That placed confident songs near the diagonals and left 6 of the 16 se
 which is why the map now uses the regressor. The classifier catalog is in git history
 (commit b2b2547) and the app still renders it if `source` is `"bert"`.
 
+Songs whose 30-second preview was scored by the audio model (MERT, `data/catalog_audio_scores.csv`) sit at a
+linear blend of the two: feel = 0.65 × lyrics + 0.61 × sound, energy = 0.14 × lyrics + 1.02 × sound, with the
+weights fitted on MERGE. `scripts/songs.ts` fits the weights back from the CSV (and fails if any row doesn't follow
+them) and writes them into each shard with every song's lyrics and sound scores. The song card's **Why here?** panel
+uses them to show where each source alone would put the song, whether they agreed or pulled opposite ways on each
+axis, and the nearest songs by lyrics alone and by sound alone; in Discover the two spots are drawn on the map. Lyrics
+are never stored or shown, only the models' scores. Songs without an audio score are placed by their lyrics alone.
+
 ## Data
 
 `src/data/catalog.json` holds **held-out test songs** from MERGE, with predicted

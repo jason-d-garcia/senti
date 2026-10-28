@@ -24,48 +24,98 @@ export interface AxisParts {
   lyricsShare: number;
 }
 
+/** How the two pushes on one axis played out. */
+export type Verdict = "agree" | "conflict" | "lyrics" | "sound" | "still";
+
 export interface Explanation {
   lyrics: Pt;
   audio: Pt | null;
   final: Pt;
   valence: AxisParts | null;
   arousal: AxisParts | null;
+  /** MERGE test songs: where the dataset's mood tags put it. */
+  tagged?: Pt;
   summary: string;
 }
 
+/** From the ~100-song listening study (scripts/compare_study.py), shown under each axis. */
+export const STUDY_FEEL = "In our listening study, when lyrics and sound disagreed on feel, listeners sided with the lyrics 22 times and the sound 9.";
+export const STUDY_ENERGY = "Energy leans on the sound for every song: in our listening study, listeners agreed with the audio model on energy 6 times out of 7.";
+
+/** Below this total push an axis barely moved; a conflict needs both pushes at least CONFLICT; "mostly" is a 70% share. */
+const STILL = 0.1, CONFLICT = 0.05, MOSTLY = 0.7;
+/** Each axis's ends, as the map labels them. */
+export const ENDS = { valence: ["feels bad", "feels good"], arousal: ["low energy", "energetic"] } as const;
+
 const clamp = (v: number) => Math.max(-1, Math.min(1, v));
-const sectionName = (p: Pt) => emotionAt(p.valence, p.arousal)?.name.toLowerCase() ?? "mixed";
+export const sectionName = (p: Pt) => emotionAt(p.valence, p.arousal)?.name.toLowerCase() ?? "mixed";
 
 export function axisParts(lyrics: number, audio: number, w: Weights): AxisParts {
   const l = w.lyrics * lyrics, a = w.audio * audio, sum = Math.abs(l) + Math.abs(a);
   return { lyrics: l, audio: a, bias: w.bias, total: clamp(l + a + w.bias), lyricsShare: sum ? Math.abs(l) / sum : 0.5 };
 }
 
-/** Where one axis's push came from, for a lyrics share on that axis. */
-export function driver(share: number): string {
-  if (share >= 0.7) return "mostly from the lyrics";
-  if (share <= 0.3) return "mostly from the sound";
-  return "from the lyrics and the sound about equally";
+export function verdict({ lyrics: l, audio: a, lyricsShare }: AxisParts): Verdict {
+  if (Math.abs(l) + Math.abs(a) < STILL) return "still";
+  if (l * a < 0) {
+    if (Math.abs(l) >= CONFLICT && Math.abs(a) >= CONFLICT) return "conflict";
+    // A small push the other way doesn't count as agreeing: the bigger one placed it.
+    return Math.abs(l) > Math.abs(a) ? "lyrics" : "sound";
+  }
+  return lyricsShare >= MOSTLY ? "lyrics" : lyricsShare <= 1 - MOSTLY ? "sound" : "agree";
 }
 
-export function explain(song: Pt & { sources?: Sources }): Explanation {
+/** One axis's verdict as a sentence. */
+export function verdictText(axis: keyof typeof ENDS, p: AxisParts, v = verdict(p)): string {
+  if (v === "still") return "Neither pushed it far: it sits near the middle.";
+  if (v === "lyrics") return "Mostly the lyrics.";
+  if (v === "sound") return "Mostly the sound.";
+  if (v === "agree") return "Lyrics and sound agree.";
+  const lyricsWon = Math.abs(p.lyrics) >= Math.abs(p.audio);
+  const toward = ENDS[axis][(lyricsWon ? p.lyrics : p.audio) > 0 ? 1 : 0];
+  return `The ${lyricsWon ? "lyrics" : "sound"} pulled it toward ${toward}; the ${lyricsWon ? "sound" : "lyrics"} pulled it back.`;
+}
+
+type Explainable = Pt & { sources?: Sources; true_valence?: number; true_arousal?: number };
+
+export function explain(song: Explainable): Explanation {
   const final = { valence: song.valence, arousal: song.arousal };
+  const tagged = song.true_valence !== undefined && song.true_arousal !== undefined
+    ? { valence: song.true_valence, arousal: song.true_arousal } : undefined;
+  const tags = tagged
+    ? sectionName(tagged) === sectionName(final)
+      ? ` MERGE's mood tags put it in ${sectionName(tagged)} too.`
+      : ` MERGE's mood tags put it in ${sectionName(tagged)}; our model put it in ${sectionName(final)}.`
+    : "";
   const src = song.sources;
   if (!src?.audio || !src.fusion) {
     const lyrics = src?.lyrics ?? final;
-    return { lyrics, audio: null, final, valence: null, arousal: null,
-      summary: `Placed by its lyrics alone, which read as ${sectionName(lyrics)}. There was no preview for the audio model to hear.` };
+    return { lyrics, audio: null, final, valence: null, arousal: null, ...(tagged && { tagged }),
+      summary: `Placed by its lyrics alone, which read as ${sectionName(lyrics)}. The audio model hasn't heard this one yet.${tags}` };
   }
   const { lyrics, audio, fusion } = src;
   const valence = axisParts(lyrics.valence, audio.valence, fusion.valence);
   const arousal = axisParts(lyrics.arousal, audio.arousal, fusion.arousal);
   const ls = sectionName(lyrics), as = sectionName(audio);
-  const first = ls === as ? `The lyrics and the sound both read as ${ls}.` : `The lyrics read as ${ls}; the sound reads as ${as}.`;
-  const dv = driver(valence.lyricsShare), da = driver(arousal.lyricsShare);
-  const second = dv === da
-    ? `How good it feels and how much energy it has both come ${dv}.`
-    : `How good it feels comes ${dv}; its energy comes ${da}.`;
-  return { lyrics, audio, final, valence, arousal, summary: `${first} ${second}` };
+  const summary = ls === as ? `The lyrics and the sound both read as ${ls}.` : `The lyrics read as ${ls}; the sound reads as ${as}.`;
+  return { lyrics, audio, final, valence, arousal, ...(tagged && { tagged }), summary: summary + tags };
+}
+
+/** The n songs nearest to this one by their lyrics (or sound) score alone, leaving out songs without that score. */
+export function nearestBy<S extends { id: string; sources?: Sources }>(song: S, songs: S[], key: "lyrics" | "audio", n: number): S[] {
+  const p = song.sources?.[key];
+  if (!p) return [];
+  const best: [number, S][] = [];
+  for (const s of songs) {
+    const q = s.sources?.[key];
+    if (!q || s.id === song.id) continue;
+    const d = Math.hypot(q.valence - p.valence, q.arousal - p.arousal);
+    if (best.length === n && d >= best[n - 1][0]) continue;
+    const i = best.findIndex(([e]) => e > d);
+    best.splice(i < 0 ? best.length : i, 0, [d, s]);
+    if (best.length > n) best.pop();
+  }
+  return best.map(([, s]) => s);
 }
 
 /** Least-squares fit of y = w_l · l + w_a · a + b, for recovering the fusion weights from scored rows. */

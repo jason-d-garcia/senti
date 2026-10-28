@@ -118,11 +118,17 @@ function audioScores(): { scores: Map<string, { fused: [number, number]; parts: 
     fused: [+r[at("fused_v")], +r[at("fused_a")]],
     parts: [+r[at("lyrics_v")], +r[at("lyrics_a")], +r[at("audio_v")], +r[at("audio_a")]],
   });
-  // Rows clipped at the edge of the map don't follow the linear blend, so leave them out of the fit.
+  // Rows clipped at the edge of the map don't follow the linear blend, so leave them out of the fit. The blend is
+  // exactly linear, so the fitted weights must reproduce every other row (the README's weights are the cross-check).
   const fit = (axis: 0 | 1) => {
-    const w = fitWeights([...scores.values()].filter((s) => Math.abs(s.fused[axis]) < 0.9999)
-      .map((s) => [s.parts[axis], s.parts[axis + 2], s.fused[axis]]));
-    return { lyrics: +w.lyrics.toFixed(4), audio: +w.audio.toFixed(4), bias: +w.bias.toFixed(4) };
+    const rows = [...scores.values()].filter((s) => Math.abs(s.fused[axis]) < 0.9999)
+      .map((s): [number, number, number] => [s.parts[axis], s.parts[axis + 2], s.fused[axis]]);
+    const f = fitWeights(rows);
+    const w = { lyrics: +f.lyrics.toFixed(4), audio: +f.audio.toFixed(4), bias: +f.bias.toFixed(4) };
+    const worst = Math.max(...rows.map(([l, a, y]) => Math.abs(w.lyrics * l + w.audio * a + w.bias - y)));
+    console.log(`${axis ? "arousal" : "valence"} blend: max residual ${worst.toFixed(5)} over ${rows.length} rows`);
+    if (!(worst < 1e-3)) throw new Error(`the ${axis ? "arousal" : "valence"} blend isn't linear (max residual ${worst}): check the audio scores`);
+    return w;
   };
   return { scores, fusion: scores.size ? { valence: fit(0), arousal: fit(1) } : undefined };
 }
