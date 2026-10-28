@@ -560,7 +560,7 @@ export default function Minimal() {
               <div className="meta">
                 <h2 className="title" id="card-title">{pick.song.title}</h2>
                 <div className="artist">{pick.song.artist}{pick.song.year ? ` · ${pick.song.year}` : ""}</div>
-                <button type="button" className="why-chip" aria-expanded={why} aria-controls={why ? "why-panel" : undefined} onClick={() => setWhy((o) => !o)}
+                <button type="button" className="why-chip" aria-expanded={why} aria-controls={why ? "why-panel" : undefined} onClick={() => { setWhy((o) => !o); void need(SECTIONS); }}
                   style={{ "--chip": pickColor } as React.CSSProperties}>
                   <span className="why-chip-dot" aria-hidden="true" />
                   <span className="why-chip-name">{pickEmotion?.name ?? "Mixed"}</span>

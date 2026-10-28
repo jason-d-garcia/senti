@@ -38,9 +38,8 @@ export interface Explanation {
   summary: string;
 }
 
-/** From the ~100-song listening study (scripts/compare_study.py), shown under each axis. */
-export const STUDY_FEEL = "In our listening study, when lyrics and sound disagreed on feel, listeners sided with the lyrics 22 times and the sound 9.";
-export const STUDY_ENERGY = "Energy leans on the sound for every song: in our listening study, listeners agreed with the audio model on energy 6 times out of 7.";
+/** True of every song by construction (arousal weights 0.14 vs 1.02), so it's said once rather than found per song. */
+export const ENERGY_NOTE = "Energy leans on the sound for every song: the blend gives the sound about 7 times the lyrics' weight.";
 
 /** Below this total push an axis barely moved; a conflict needs both pushes at least CONFLICT; "mostly" is a 70% share. */
 const STILL = 0.1, CONFLICT = 0.05, MOSTLY = 0.7;
@@ -91,7 +90,7 @@ export function explain(song: Explainable): Explanation {
   if (!src?.audio || !src.fusion) {
     const lyrics = src?.lyrics ?? final;
     return { lyrics, audio: null, final, valence: null, arousal: null, ...(tagged && { tagged }),
-      summary: `Placed by its lyrics alone, which read as ${sectionName(lyrics)}. The audio model hasn't heard this one yet.${tags}` };
+      summary: `Placed by its lyrics alone, which read as ${sectionName(lyrics)}. There's no audio score for this one.${tags}` };
   }
   const { lyrics, audio, fusion } = src;
   const valence = axisParts(lyrics.valence, audio.valence, fusion.valence);

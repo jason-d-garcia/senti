@@ -33,5 +33,6 @@ where its songs sit.
 - **Lyric arc in "Why here?":** score each song's overlapping 160-token windows separately
   (`scripts/score_windows.py` → `data/catalog_lyric_arc.csv`, 8 buckets per axis), carry it as an optional 10th shard
   field and draw a small sparkline ("turns darker toward the end"). Scores only, no lyric text. Needs the lyrics and
-  the model checkpoint, so it runs on Jason's Mac.
+  the model checkpoint, so it runs on Jason's Mac. This stands in for "key lines": quoting lines, or even single
+  words, would mean showing copyrighted lyrics, so the panel never does.
 - **Imports:** Last.fm import of a listener's top tracks, and Spotify for allow-listed testers only.

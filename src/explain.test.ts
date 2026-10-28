@@ -69,7 +69,7 @@ describe("explain", () => {
     expect(e.audio).toBeNull();
     expect(e.valence).toBeNull();
     expect(e.tagged).toBeUndefined();
-    expect(e.summary).toBe("Placed by its lyrics alone, which read as lethargic. The audio model hasn't heard this one yet.");
+    expect(e.summary).toBe("Placed by its lyrics alone, which read as lethargic. There's no audio score for this one.");
   });
   it("adds where the mood tags put a MERGE test song", () => {
     const e = explain({ valence: 0.5, arousal: -0.5, true_valence: -0.5, true_arousal: -0.5 });

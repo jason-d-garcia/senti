@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ENDS, STUDY_ENERGY, STUDY_FEEL, explain, nearestBy, verdict, verdictText } from "../explain";
+import { ENDS, ENERGY_NOTE, explain, nearestBy, verdict, verdictText } from "../explain";
 import type { AxisParts, Explanation, Pt, Sources } from "../explain";
 
 export const LYRICS = "#b4a4ff";
@@ -45,7 +45,7 @@ function MiniMap({ e, color, label }: { e: Explanation; color: string; label: st
 
 /** One axis: the verdict, then each source's push as a tick from the centre (lyrics above, sound below) and where
  *  the song ends up. The tiny blend bias is folded into the lyrics tick, so the two ticks add up to the marker. */
-function VerdictRow({ name, axis, parts, color, context }: { name: string; axis: keyof typeof ENDS; parts: AxisParts; color: string; context: string }) {
+function VerdictRow({ name, axis, parts, color, context }: { name: string; axis: keyof typeof ENDS; parts: AxisParts; color: string; context?: string }) {
   const v = verdict(parts);
   const tick = (to: number, c: string, lane: string) => {
     const [lo, hi] = [Math.min(0, to), Math.max(0, to)].map((x) => Math.max(-1, Math.min(1, x)));
@@ -57,7 +57,8 @@ function VerdictRow({ name, axis, parts, color, context }: { name: string; axis:
     <div className="why-row">
       <p className="why-verdict">
         <span className="why-axis-name">{name}</span> {verdictText(axis, parts, v)}
-        {v !== "still" && v !== "conflict" && <span className="why-pct"> lyrics {pct(parts.lyricsShare)} · sound {pct(1 - parts.lyricsShare)}</span>}
+        {/* Shares only when both pushed the same way; otherwise "8%" reads as help, not opposition. */}
+        {v !== "still" && v !== "conflict" && parts.lyrics * parts.audio >= 0 && <>{" "}<span className="why-pct">lyrics {pct(parts.lyricsShare)} · sound {pct(1 - parts.lyricsShare)}</span></>}
       </p>
       <div className="why-track" aria-hidden="true">
         <span className="why-mid" />
@@ -66,7 +67,7 @@ function VerdictRow({ name, axis, parts, color, context }: { name: string; axis:
         <span className="why-end" style={{ left: at(parts.total), "--glow": color } as React.CSSProperties} />
       </div>
       <div className="why-ends" aria-hidden="true"><span>{ENDS[axis][0]}</span><span>{ENDS[axis][1]}</span></div>
-      <p className="why-context">{context}</p>
+      {context && <p className="why-context">{context}</p>}
     </div>
   );
 }
@@ -120,8 +121,8 @@ export function WhyHere<S extends Song>({ song, songs, onPlay, color, id }: { so
         </div>
         {e.valence && e.arousal && (
           <div className="why-rows">
-            <VerdictRow name="Feel" axis="valence" parts={e.valence} color={color} context={STUDY_FEEL} />
-            <VerdictRow name="Energy" axis="arousal" parts={e.arousal} color={color} context={STUDY_ENERGY} />
+            <VerdictRow name="Feel" axis="valence" parts={e.valence} color={color} />
+            <VerdictRow name="Energy" axis="arousal" parts={e.arousal} color={color} context={ENERGY_NOTE} />
           </div>
         )}
       </div>
