@@ -78,7 +78,7 @@ choosing models on the test set.
 Run with [`notebooks/colab_audio_fusion.ipynb`](../notebooks/colab_audio_fusion.ipynb) on the same seed-42 MERGE
 split. Audio is MERGE's 30-second clips, embedded by a frozen music model; the audio head is a ridge regression on
 those embeddings, with the feature set chosen on validation (MERT-v1-95M, layer 6, mean over 5-second slices).
-Lyrics + audio is a linear blend of the live BERT score and the audio score, fitted on the training songs. 1,734
+Lyrics + audio is a linear blend of the live BERT score and the audio score, fitted on the validation songs. 1,734
 training and 206 test songs had audio (the rest had no clip in MERGE's audio set).
 
 | Model (206 test songs) | Valence r | Valence MAE | Arousal r | Arousal MAE |
