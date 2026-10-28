@@ -1,6 +1,7 @@
 import { EMOTIONS, emotionAt, placeSong } from "./mood";
 import type { PlacedSong } from "./mood";
 import type { Preview } from "./preview";
+import type { Fusion, Sources } from "./explain";
 
 /**
  * The catalogue comes in one file per emotion (public/songs/<emotion>.json, written by scripts/songs.ts), so the
@@ -9,11 +10,12 @@ import type { Preview } from "./preview";
 export const SECTIONS = [...EMOTIONS.map((e) => e.name), "Mixed"];
 export const sectionOf = (p: { valence: number; arousal: number }) => emotionAt(p.valence, p.arousal)?.name ?? "Mixed";
 
-/** A song with its preview looked up ahead of time (no iTunes lookup needed to play it). */
-export type CatalogSong = PlacedSong & { preview?: Preview };
+/** A song with its preview looked up ahead of time (no iTunes lookup needed to play it), and what placed it. */
+export type CatalogSong = PlacedSong & { preview?: Preview; sources?: Sources };
 
 type Row = [i: number, title: string, artist: string, valence: number, arousal: number, year: number, peak: number,
-  preview?: [audioUrl: string, pageUrl: string, artworkUrl: string]];
+  preview?: [audioUrl: string, pageUrl: string, artworkUrl: string] | null,
+  scores?: [lyricsV: number, lyricsA: number, audioV: number, audioA: number]];
 
 const loaded = new Map<string, Promise<CatalogSong[]>>();
 
@@ -23,9 +25,13 @@ export function loadSection(name: string): Promise<CatalogSong[]> {
   if (p) return p;
   p = fetch(`/songs/${name.toLowerCase()}.json`)
     .then((r) => { if (!r.ok) throw new Error(`songs ${r.status}`); return r.json(); })
-    .then(({ songs }: { songs: Row[] }) => songs.map(([i, title, artist, valence, arousal, year, peak, pv]) => {
+    .then(({ songs, fusion }: { songs: Row[]; fusion?: Fusion }) => songs.map(([i, title, artist, valence, arousal, year, peak, pv, sc]) => {
       const s: CatalogSong = placeSong({ title, artist, valence, arousal, year: year || undefined, peak_rank: peak || undefined }, i);
       if (pv) s.preview = { audioUrl: pv[0], pageUrl: pv[1] || "https://music.apple.com", artworkUrl: pv[2] || undefined };
+      // Without audio scores the song sits where its lyrics put it.
+      s.sources = sc && fusion
+        ? { lyrics: { valence: sc[0], arousal: sc[1] }, audio: { valence: sc[2], arousal: sc[3] }, fusion }
+        : { lyrics: { valence, arousal } };
       return s;
     }))
     .catch((e) => { loaded.delete(name); throw e; });

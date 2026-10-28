@@ -17,6 +17,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { emotionAt, EMOTIONS } from "../src/mood";
 import { isMatch } from "../src/preview";
+import { fitWeights } from "../src/explain";
+import type { Fusion } from "../src/explain";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // PREVIEWS_CACHE lets a long prefetch write outside the git checkout, so pulls never trip over the growing file.
@@ -104,15 +106,25 @@ function parseCsv(text: string): string[][] {
 }
 const csvCell = (v: string | number) => (typeof v === "number" ? String(v) : `"${v.replace(/"/g, '""')}"`);
 
-/** Blended lyrics + audio positions from colab_audio_catalog.ipynb, by title and artist. */
-function audioScores(): Map<string, [number, number]> {
-  const m = new Map<string, [number, number]>();
+/** Blended lyrics + audio positions from colab_audio_catalog.ipynb, by title and artist, with the lyrics and audio
+ *  scores they were blended from, and the blend's weights fitted back from those rows (for the "why here?" panel). */
+function audioScores(): { scores: Map<string, { fused: [number, number]; parts: [number, number, number, number] }>; fusion?: Fusion } {
+  const scores = new Map<string, { fused: [number, number]; parts: [number, number, number, number] }>();
   const path = join(ROOT, "data", "catalog_audio_scores.csv");
-  if (!existsSync(path)) return m;
+  if (!existsSync(path)) return { scores };
   const [head, ...rows] = parseCsv(readFileSync(path, "utf8"));
   const at = (n: string) => head.indexOf(n);
-  for (const r of rows) if (r.length === head.length) m.set(keyOf(r[at("title")], r[at("artist")]), [+r[at("fused_v")], +r[at("fused_a")]]);
-  return m;
+  for (const r of rows) if (r.length === head.length) scores.set(keyOf(r[at("title")], r[at("artist")]), {
+    fused: [+r[at("fused_v")], +r[at("fused_a")]],
+    parts: [+r[at("lyrics_v")], +r[at("lyrics_a")], +r[at("audio_v")], +r[at("audio_a")]],
+  });
+  // Rows clipped at the edge of the map don't follow the linear blend, so leave them out of the fit.
+  const fit = (axis: 0 | 1) => {
+    const w = fitWeights([...scores.values()].filter((s) => Math.abs(s.fused[axis]) < 0.9999)
+      .map((s) => [s.parts[axis], s.parts[axis + 2], s.fused[axis]]));
+    return { lyrics: +w.lyrics.toFixed(4), audio: +w.audio.toFixed(4), bias: +w.bias.toFixed(4) };
+  };
+  return { scores, fusion: scores.size ? { valence: fit(0), arousal: fit(1) } : undefined };
 }
 
 function audioCsv() {
@@ -128,19 +140,24 @@ function audioCsv() {
 
 function shards() {
   const cache = loadCache();
-  const audio = audioScores();
+  const { scores: audio, fusion } = audioScores();
   const by = new Map<string, unknown[][]>(SECTIONS.map((s) => [s, []]));
   catalogue().forEach(([title, artist, lv, la, year, peak], i) => {
-    const [v, a] = audio.get(keyOf(title, artist)) ?? [lv, la];
+    const scored = audio.get(keyOf(title, artist));
+    const [v, a] = scored?.fused ?? [lv, la];
     const sec = emotionAt(v, a)?.name ?? "Mixed";
     const p = cache.get(keyOf(title, artist));
-    // [index, title, artist, valence, arousal, year, peak, preview?]; the index keeps song ids stable.
-    by.get(sec)!.push([i, title, artist, +v.toFixed(4), +a.toFixed(4), year ?? 0, peak ?? 0, ...(p ? [p] : [])]);
+    // [index, title, artist, valence, arousal, year, peak, preview?, [lyrics v, lyrics a, audio v, audio a]?];
+    // the index keeps song ids stable. Songs placed by lyrics alone need no scores: their spot is the lyrics score.
+    const row: unknown[] = [i, title, artist, +v.toFixed(4), +a.toFixed(4), year ?? 0, peak ?? 0];
+    if (p || scored) row.push(p ?? null);
+    if (scored) row.push(scored.parts);
+    by.get(sec)!.push(row);
   });
   mkdirSync(OUT, { recursive: true });
-  for (const [sec, rows] of by) writeFileSync(join(OUT, `${sectionSlug(sec)}.json`), JSON.stringify({ songs: rows }));
+  for (const [sec, rows] of by) writeFileSync(join(OUT, `${sectionSlug(sec)}.json`), JSON.stringify({ ...(fusion && { fusion }), songs: rows }));
   const withPreview = [...cache.values()].filter(Boolean).length;
-  if (audio.size) console.log(`placed ${audio.size} songs by lyrics + audio`);
+  if (fusion) console.log(`placed ${audio.size} songs by lyrics + audio, weights ${JSON.stringify(fusion)}`);
   console.log(`wrote ${by.size} files to public/songs (${[...by.values()].reduce((n, r) => n + r.length, 0)} songs, ${withPreview} stored previews)`);
 }
 

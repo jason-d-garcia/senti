@@ -12,6 +12,7 @@ import type { FieldSong, Pt } from "./Field";
 import { AppleMusicLogo, GitHubLogo, SpotifyLogo } from "./logos";
 import { VibePicker } from "./VibePicker";
 import { SongSearch } from "./SongSearch";
+import { WhyHere } from "./WhyHere";
 import { share, sharedSongKey, songLink } from "../share";
 import "./minimal.css";
 
@@ -336,6 +337,10 @@ export default function Minimal() {
   }, [need]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const placing = pick?.step === "place";
+  /** "Why is it here?" stays open from one song to the next once someone opens it. */
+  const [why, setWhy] = useState(false);
+  const pickEmotion = pick ? emotionAt(pick.song.valence, pick.song.arousal) : null;
+  const pickColor = COLOR[pickEmotion?.mood ?? "mixed"];
 
   // Discover: zoom in around the song, far enough that its nearest neighbours in the same emotion spread
   // across the view (songs cluster tightly), and show what else is nearby.
@@ -541,6 +546,13 @@ export default function Minimal() {
               <div className="meta">
                 <h2 className="title" id="card-title">{pick.song.title}</h2>
                 <div className="artist">{pick.song.artist}{pick.song.year ? ` · ${pick.song.year}` : ""}</div>
+                <button type="button" className="why-chip" aria-expanded={why} aria-controls={why ? "why-panel" : undefined} onClick={() => setWhy((o) => !o)}
+                  style={{ "--chip": pickColor } as React.CSSProperties}>
+                  <span className="why-chip-dot" aria-hidden="true" />
+                  <span className="why-chip-name">{pickEmotion?.name ?? "Mixed"}</span>
+                  <span className="why-chip-ask">Why here?</span>
+                  <svg className="why-chip-chev" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 4.5 6 7.5 9 4.5" /></svg>
+                </button>
                 <div className="links">
                   <a href={spotifySearchUrl(pick.song)} target="_blank" rel="noreferrer" onClick={touched}><SpotifyLogo /> Spotify</a>
                   <a href={pick.preview.pageUrl} target="_blank" rel="noreferrer" onClick={touched}><AppleMusicLogo /> Apple Music</a>
@@ -563,6 +575,7 @@ export default function Minimal() {
               </div>
             </div>
 
+            {why && <WhyHere key={pick.song.id} id="why-panel" song={pick.song} color={pickColor} />}
             {!discover && (
               <button type="button" className="discover-link" onClick={openDiscover}>
                 Discover more {sectionOf(pick.song).toLowerCase()} songs <span aria-hidden="true">→</span>
