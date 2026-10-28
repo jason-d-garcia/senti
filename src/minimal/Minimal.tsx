@@ -111,6 +111,8 @@ const labelColor = (name: string) => COLOR[EMOTIONS.find((e) => e.name === name)
 const TOUCH = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 
 const REPO = "https://github.com/jason-d-garcia/senti";
+/** The song search box is hidden until there's a proper place for it; ?search shows it for trying out. */
+const SEARCH = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("search");
 
 export default function Minimal() {
   // The catalogue arrives one emotion at a time, for the part of the map in view (see ../songs.ts).
@@ -459,14 +461,14 @@ export default function Minimal() {
         } : {}) as React.CSSProperties}
       >
         <div className="page-glow" aria-hidden="true" />
-        <SongSearch
+        {SEARCH && <SongSearch
           songs={songs}
           // Searching needs the whole catalogue, not just the sections near the light (small files, cached after).
           onOpen={() => void need(SECTIONS)}
           ready={SECTIONS.every((n) => n in shards)}
           onPick={showSong}
           color={(s) => COLOR[emotionAt(s.valence, s.arousal)?.mood ?? "mixed"]}
-        />
+        />}
         <div className="page-axes" aria-hidden="true">
           <span className="axis axis-x" /><span className="axis axis-y" />
           <span className="axis-end end-right">Feels good →</span>
