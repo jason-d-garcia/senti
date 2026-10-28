@@ -72,3 +72,26 @@ is within noise, and it is significantly worse at arousal, so the live model sta
 song rather than only the first window helped each new model (DeBERTa valence r 0.730 → 0.751,
 RoBERTa 0.674 → 0.718). Picking DeBERTa for valence and BERT for arousal was ruled out: it would be
 choosing models on the test set.
+
+## Does audio help? Lyrics vs audio vs lyrics + audio
+
+Run with [`notebooks/colab_audio_fusion.ipynb`](../notebooks/colab_audio_fusion.ipynb) on the same seed-42 MERGE
+split. Audio is MERGE's 30-second clips, embedded by a frozen music model; the audio head is a ridge regression on
+those embeddings, with the feature set chosen on validation (MERT-v1-95M, layer 6, mean over 5-second slices).
+Lyrics + audio is a linear blend of the live BERT score and the audio score, fitted on the training songs. 1,734
+training and 206 test songs had audio (the rest had no clip in MERGE's audio set).
+
+| Model (206 test songs) | Valence r | Valence MAE | Arousal r | Arousal MAE |
+|---|---|---|---|---|
+| Lyrics only (live BERT) | 0.716 | 0.223 | 0.611 | 0.162 |
+| Audio only (MERT layer 6) | 0.683 | 0.276 | 0.750 | 0.136 |
+| **Lyrics + audio** | **0.770** | **0.219** | **0.765** | **0.134** |
+
+**Is the gain real?** Paired bootstrap over the test songs, change in Pearson r of lyrics + audio against lyrics
+only: valence **+0.054 [+0.017, +0.095]**, arousal **+0.154 [+0.081, +0.235]**. Both intervals exclude zero.
+
+**Conclusion.** Audio helps on both axes, most of all for energy (arousal), where audio alone already beats the
+lyrics model. The fitted blend leans on audio for arousal (weights: lyrics 0.14, audio 1.02) and uses both for
+valence (lyrics 0.65, audio 0.61). Next: score the catalogue's Apple previews with this head
+([`notebooks/colab_audio_catalog.ipynb`](../notebooks/colab_audio_catalog.ipynb)) and check the blended scores
+against listener placements from the study.
