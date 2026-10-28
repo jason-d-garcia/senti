@@ -11,6 +11,7 @@ import { Field } from "./Field";
 import type { FieldSong, Pt } from "./Field";
 import { AppleMusicLogo, GitHubLogo, SpotifyLogo } from "./logos";
 import { VibePicker } from "./VibePicker";
+import { SongSearch } from "./SongSearch";
 import { share, sharedSongKey, songLink } from "../share";
 import "./minimal.css";
 
@@ -307,6 +308,18 @@ export default function Minimal() {
     if (r === "copied") flash("Link copied");
   };
 
+  /** Put the light on a song and show its card (from a share link or the search box). */
+  const showSong = (s: PlacedSong) => {
+    audio.current?.pause();
+    setDiscover(null);
+    setDot({ valence: s.valence, arousal: s.arousal });
+    setPinned(true);
+    findPreview(s).then((p) => {
+      if (p) { setPick({ song: s, preview: p, step: "listen" }); setProgress(0); setPlaying(false); }
+      else flash("No preview for that song");
+    });
+  };
+
   // Opened from a share link: put the light on that song and show its card.
   const opened = useRef(false);
   useEffect(() => {
@@ -316,12 +329,9 @@ export default function Minimal() {
     // The link doesn't say which section the song is in, so look through all of them (small files, cached after).
     void need(SECTIONS).then((all) => {
       const s = [...all, ...testSongs].find((x) => songKey(x) === key);
-      if (!s) return;
-      setDot({ valence: s.valence, arousal: s.arousal });
-      setPinned(true);
-      findPreview(s).then((p) => { if (p) { setPick({ song: s, preview: p, step: "listen" }); setProgress(0); } });
+      if (s) showSong(s);
     });
-  }, [need]);
+  }, [need]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const placing = pick?.step === "place";
 
@@ -449,6 +459,14 @@ export default function Minimal() {
         } : {}) as React.CSSProperties}
       >
         <div className="page-glow" aria-hidden="true" />
+        <SongSearch
+          songs={songs}
+          // Searching needs the whole catalogue, not just the sections near the light (small files, cached after).
+          onOpen={() => void need(SECTIONS)}
+          ready={SECTIONS.every((n) => n in shards)}
+          onPick={showSong}
+          color={(s) => COLOR[emotionAt(s.valence, s.arousal)?.mood ?? "mixed"]}
+        />
         <div className="page-axes" aria-hidden="true">
           <span className="axis axis-x" /><span className="axis axis-y" />
           <span className="axis-end end-right">Feels good →</span>

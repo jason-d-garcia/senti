@@ -244,7 +244,7 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   // pointer is treated as having left the map (so reaching for a button doesn't move the light).
   const overUi = useRef(false);
   const isUi = (t: EventTarget | null) =>
-    t instanceof Element && !!t.closest(".dock, .card, .discover-bar, .song-dot, button, a, input, summary, label");
+    t instanceof Element && !!t.closest(".dock, .card, .discover-bar, .search, .song-dot, button, a, input, summary, label");
   const handlers = useRef({ onPointerDown, follow, onPointerUp, onPointerLeave });
   handlers.current = { onPointerDown, follow, onPointerUp, onPointerLeave };
   useEffect(() => {
