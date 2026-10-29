@@ -521,3 +521,90 @@ html[data-view="minimal"], html[data-view="minimal"] body { background: #05060b;
   .search { width: calc(50% - 34px); transition: opacity 300ms ease, width 250ms ease; }
   .search:focus-within { width: calc(100% - 32px); }
 }
+
+/* "Why here?": what placed the song, lyrics vs sound */
+.why-chip {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; margin-top: 4px;
+  min-height: 34px; padding: 6px 12px 6px 11px; border-radius: 999px; cursor: pointer;
+  font: 600 0.85rem/1 var(--font-text); color: var(--ink);
+  background: color-mix(in srgb, var(--chip) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip) 38%, transparent);
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.why-chip:hover { background: color-mix(in srgb, var(--chip) 18%, transparent); border-color: var(--chip); }
+.why-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.why-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--chip); box-shadow: 0 0 10px var(--chip); }
+.why-chip-name { color: var(--chip); }
+.why-chip-ask { color: var(--muted); font-weight: 500; padding-left: 8px; border-left: 1px solid rgba(160, 175, 220, 0.22); }
+.why-chip-chev { color: var(--muted); transition: transform 200ms ease; }
+.why-chip[aria-expanded="true"] .why-chip-chev { transform: rotate(180deg); }
+
+.why { margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(160, 175, 220, 0.1); animation: fade 300ms ease; }
+.why-body {
+  display: grid; grid-template-columns: 168px minmax(0, 1fr); grid-template-areas: "map text" "map rows";
+  grid-template-rows: auto 1fr; column-gap: 22px; row-gap: 16px; align-items: start;
+}
+.why-map-col { grid-area: map; display: flex; flex-direction: column; gap: 10px; }
+.why-text { grid-area: text; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.why-rows { grid-area: rows; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.why-map { width: 100%; height: auto; display: block; overflow: visible; }
+.why-ring { fill: none; stroke: rgba(160, 175, 220, 0.22); stroke-width: 0.012; }
+.why-ring.is-mixed { stroke-dasharray: 0.03 0.04; }
+.why-axis { stroke: rgba(160, 175, 220, 0.14); stroke-width: 0.01; }
+.why-pull { stroke-width: 0.022; stroke-dasharray: 0.05 0.04; opacity: 0.75; }
+.why-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; margin: 0; padding: 0; list-style: none; font-size: 0.75rem; color: var(--dim); }
+.why-legend li { display: inline-flex; align-items: center; gap: 5px; }
+.why-legend svg { width: 10px; height: 10px; }
+.why-summary { margin: 0; font: 500 1rem/1.45 var(--font-text); color: var(--ink); text-wrap: pretty; }
+.why-like { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--dim); }
+.why-song {
+  padding: 0; border: 0; background: none; cursor: pointer; font: inherit; font-weight: 600; color: var(--muted);
+  text-decoration: underline; text-decoration-color: rgba(160, 175, 220, 0.3); text-underline-offset: 3px;
+}
+.why-song:hover { color: var(--ink); text-decoration-color: currentColor; }
+.why-song:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 3px; }
+.why-verdict { margin: 0 0 9px; font: 500 0.9rem/1.4 var(--font-text); color: var(--ink); text-wrap: pretty; }
+.why-axis-name { margin-right: 4px; font: 700 0.72rem/1 var(--font-text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.why-pct { display: inline-block; font-size: 0.78rem; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.why-track { position: relative; height: 18px; border-radius: 4px; background: rgba(160, 175, 220, 0.07); }
+.why-mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: rgba(160, 175, 220, 0.35); }
+/* Each source's push from the centre: lyrics above the middle, sound below, each capped with its map shape. */
+.why-tick { position: absolute; height: 3px; border-radius: 999px; background: var(--c); min-width: 1px; }
+.why-tick.is-lyrics { top: 3px; }
+.why-tick.is-sound { bottom: 3px; }
+.why-tick::after { content: ""; position: absolute; right: -4px; top: -2.5px; width: 6px; height: 6px; box-sizing: border-box; border: 1.5px solid var(--c); background: #10131e; }
+.why-tick.is-neg::after { right: auto; left: -4px; }
+.why-tick.is-lyrics::after { transform: rotate(45deg); }
+.why-tick.is-sound::after { border-radius: 50%; }
+.why-end {
+  position: absolute; top: 50%; width: 4px; height: 24px; margin: -12px 0 0 -2px; border-radius: 2px;
+  background: var(--glow); box-shadow: 0 0 10px var(--glow), 0 0 0 1.5px #fff;
+}
+.why-ends { display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.72rem; color: var(--dim); }
+.why-context { margin: 6px 0 0; font-size: 0.75rem; line-height: 1.45; color: var(--dim); text-wrap: pretty; }
+.why-note { margin: 16px 0 0; font-size: 0.78rem; line-height: 1.5; color: var(--dim); text-wrap: pretty; }
+
+/* Discover zoom: the lyrics and sound spots on the big map, tethered to the song's cover. */
+.why-tether { stroke-dasharray: 4 4 !important; opacity: 0.85; animation: fade 400ms ease both; }
+.why-tether.is-lyrics { stroke: #b4a4ff !important; }
+.why-tether.is-audio { stroke: #e8ecf8 !important; }
+.why-ghost {
+  position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; box-sizing: border-box; pointer-events: none;
+  border: 2px solid; background: #10131e; scale: calc(1 / var(--k)); animation: fade 400ms ease backwards;
+}
+.why-ghost.is-lyrics { border-color: #b4a4ff; rotate: 45deg; box-shadow: 0 0 12px -2px #b4a4ff; }
+.why-ghost.is-off { opacity: 0.6; }
+/* Zoomed in, the card stays short enough to leave the traced spots in view; the panel scrolls inside it. */
+.stage.is-discovering .card:has(.why) { max-height: min(46%, 440px); }
+.why-ghost.is-audio { border-color: #e8ecf8; border-radius: 50%; box-shadow: 0 0 12px -2px #e8ecf8; }
+
+@media (max-width: 560px) {
+  /* Phones: mini map beside the sentence, the axis rows full width under them, the legend on one wrapped line. */
+  .why-body { grid-template-columns: 104px minmax(0, 1fr); grid-template-areas: "map text" "rows rows"; grid-template-rows: auto auto; column-gap: 14px; }
+  .why-summary { font-size: 0.92rem; }
+  .why-legend { gap: 2px 8px; font-size: 0.7rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .why, .why-tether, .why-ghost { animation: none; }
+  .why-chip-chev { transition: none; }
+}

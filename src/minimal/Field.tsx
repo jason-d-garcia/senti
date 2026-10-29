@@ -47,13 +47,15 @@ interface Props {
   zoom?: { center: Pt; scale: number; songs: FieldSong[]; onSong: (id: string) => void; onPan: (center: Pt) => void; onPanLive?: (center: Pt | null) => void } | null;
   /** The area that tracks the pointer (the whole stage), so the light can travel past the board to the screen edge. */
   surface?: RefObject<HTMLElement>;
+  /** Zoomed in with "Why here?" open: where the lyrics and the sound alone put the song, tethered to its dot. */
+  trace?: { lyrics: Pt; audio: Pt; final: Pt } | null;
 }
 
 const pct = (p: Pt) => ({ x: ((p.valence + 1) / 2) * 100, y: ((1 - p.arousal) / 2) * 100 });
 const pos = (p: Pt) => { const { x, y } = pct(p); return { left: `${x}%`, top: `${y}%` }; };
 
 /** The mood map: faint section lines, a light that follows the pointer shedding sparkles, and a zoomed song view. */
-export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, zoom, surface }: Props) {
+export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, zoom, surface, trace }: Props) {
   const [ghost, setGhost] = useState<Pt | null>(null);
   const [overLight, setOverLight] = useState(false);
   // Panning the zoomed map: where the drag started, and the centre it would move to.
@@ -288,6 +290,18 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
   const zc = zoom ? panCenter ?? zoom.center : { valence: 0, arousal: 0 };
   const c = zoom ? pct(zc) : { x: 50, y: 50 };
   const k = zoom?.scale ?? 1;
+  // Zoomed far in, the lyrics and sound spots can be well off the board: hold each marker at the board's edge,
+  // on its tether, so it still says which way that source pulled.
+  const inView = (p: Pt): Pt & { off: boolean } => {
+    if (!trace) return { ...p, off: false };
+    const f = trace.final, r = 0.92 / k;
+    let t = 1;
+    for (const [d, c] of [[p.valence - f.valence, zc.valence - f.valence], [p.arousal - f.arousal, zc.arousal - f.arousal]]) {
+      if (d > 0) t = Math.min(t, (c + r) / d); else if (d < 0) t = Math.min(t, (c - r) / d);
+    }
+    t = Math.max(0, t);
+    return { valence: f.valence + t * (p.valence - f.valence), arousal: f.arousal + t * (p.arousal - f.arousal), off: t < 1 };
+  };
 
   return (
     <div
@@ -329,6 +343,9 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
               x1="0" y1="0" x2={RAY * Math.cos(rad(e.from))} y2={-RAY * Math.sin(rad(e.from))} />
           ))}
           <ellipse cx="0" cy="0" rx={MIXED_RADIUS} ry={MIXED_RADIUS} />
+          {zoom && trace && (["lyrics", "audio"] as const).map((k) => (
+            <line key={k} className={`why-tether is-${k}`} x1={trace[k].valence} y1={-trace[k].arousal} x2={trace.final.valence} y2={-trace.final.arousal} />
+          ))}
         </g>
       </svg>
       <div
@@ -366,6 +383,11 @@ export function Field({ dot, labelColor, onMove, color, pinned, onPin, placing, 
             {s.featured && (s.artwork ? <img src={s.artwork} alt="" width={46} height={46} /> : <span aria-hidden="true">♪</span>)}
           </button>
         ))}
+
+        {zoom && trace && (["lyrics", "audio"] as const).map((key) => {
+          const g = inView(trace[key]);
+          return <span key={key} className={`why-ghost is-${key}${g.off ? " is-off" : ""}`} style={pos(g)} aria-hidden="true" />;
+        })}
 
         {/* The light rides on a board-sized layer that is only ever translated, so moving it never repaints the map. */}
         <span ref={light} className="light-track" style={{ transform: `translate(${pct(dot).x - 50}%, ${pct(dot).y - 50}%)` }} aria-hidden="true">
