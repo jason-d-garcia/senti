@@ -1,5 +1,6 @@
 import { StrictMode, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
+import { Analytics } from "@vercel/analytics/react";
 import "./styles.css";
 
 // The original detailed view stays available for demos: ?classic, #classic, or ?embed.
@@ -14,5 +15,6 @@ createRoot(document.getElementById("root")!).render(
     <Suspense fallback={null}>
       <View />
     </Suspense>
+    <Analytics />
   </StrictMode>,
 );
