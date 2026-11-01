@@ -95,3 +95,48 @@ lyrics model. The fitted blend leans on audio for arousal (weights: lyrics 0.14,
 valence (lyrics 0.65, audio 0.61). Next: score the catalogue's Apple previews with this head
 ([`notebooks/colab_audio_catalog.ipynb`](../notebooks/colab_audio_catalog.ipynb)) and check the blended scores
 against listener placements from the study.
+
+## Fine-tuning the audio model end to end
+
+Run with [`scripts/modal_finetune.py`](../scripts/modal_finetune.py) on Modal (L4 GPUs, about $2). The frozen head above
+keeps MERT fixed and fits a ridge regression on one layer. Here all of MERT-v1-95M is trained, with a learned mix of
+its 13 layers and a linear valence/arousal head, on random 5-second crops of the MERGE training clips (4 per clip per
+epoch; AdamW, MERT 2e-5, head 1e-3, 10% warm-up; up to 10 epochs, best epoch on validation MSE, patience 3). Same
+seed-42 split and labels as the fusion notebook. Three seeds were trained and their predictions averaged. The frozen
+head was re-scored on the same clips in the same run, so every row below uses the same 206 test songs.
+
+| Model (206 MERGE test songs) | Valence r | Arousal r |
+|---|---|---|
+| Lyrics only (live BERT) | 0.716 | 0.611 |
+| Audio, frozen head (live) | 0.683 | 0.751 |
+| Audio, fine-tuned, seed 0 / 1 / 2 | 0.733 / 0.728 / 0.718 | 0.774 / 0.782 / 0.787 |
+| **Audio, fine-tuned (mean of 3 seeds)** | **0.742** | **0.793** |
+| Lyrics + frozen audio (live) | 0.770 | 0.765 |
+| **Lyrics + fine-tuned audio** | **0.789** | **0.805** |
+
+Paired bootstrap over the test songs (2,000 resamples), change in Pearson r with 95% intervals:
+
+| Comparison | Valence Δr | Arousal Δr |
+|---|---|---|
+| Fine-tuned vs frozen audio | **+0.059 [+0.024, +0.092]** | **+0.042 [+0.015, +0.071]** |
+| Lyrics + fine-tuned vs lyrics + frozen | +0.019 [−0.001, +0.040] | **+0.039 [+0.013, +0.065]** |
+| Lyrics + fine-tuned vs lyrics only | **+0.073 [+0.028, +0.125]** | **+0.194 [+0.115, +0.281]** |
+
+Best epochs were 9, 2 and 7 (seed 1 stopped early after 5). The average of the three seeds beats each single seed.
+
+**Against the listening study** (100 songs, 15 raters, Apple previews rather than MERGE clips;
+`scripts/compare_study.py`):
+
+| Blend of lyrics + audio | Valence r | Arousal r |
+|---|---|---|
+| Frozen head (live) | 0.648 | 0.845 |
+| Fine-tuned | 0.615 | 0.839 |
+
+Fine-tuned audio alone reaches arousal r 0.833 and valence r 0.304 on the study songs; the fine-tuned blend still beats
+lyrics alone on arousal by +0.269 [+0.161, +0.387] and is level on valence (−0.014 [−0.092, +0.067]).
+
+**Conclusion.** On MERGE, fine-tuning beats frozen embeddings on both axes, and the intervals exclude zero. On the
+listening study the gain does not carry over: the fine-tuned blend is level with the live one on arousal and slightly
+lower on valence, well within noise for 100 songs. Likely reasons are the shift from MERGE's clips to Apple's
+previews, and MERGE's labels coming from AllMusic tags rather than listeners. The live map keeps the frozen head; a
+larger study (round 2) would settle the valence difference.
