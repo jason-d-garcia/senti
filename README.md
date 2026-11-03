@@ -99,6 +99,14 @@ on a Colab GPU from your own copy of the data.
 `scripts/score_catalog.py` regenerates a four-class catalog from a checkpoint and a local
 `title, artist, lyrics` CSV; lyrics are only read locally and never written to the output.
 
+## Research report
+
+[*Lyrics for Meaning, Audio for Energy*](public/senti-report.pdf) (7 pages) covers the models, the MERGE
+results and the listening study (15 raters, 100 songs): lyrics + audio raises arousal correlation with
+listeners from 0.57 to 0.85, and the blend sits closer to the crowd consensus than 12 of the 15 raters.
+It is served at `/senti-report.pdf`. LaTeX source, references and the figure script are in [`paper/`](paper/);
+the study ratings themselves are not in the repo.
+
 ## Listener ratings
 
 "Rate a song" shows one song from the feeling under the dot. A listener can confirm the spot (👍) or
