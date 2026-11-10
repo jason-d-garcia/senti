@@ -5,6 +5,6 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "./",
   plugins: [react()],
-  // Pages: the app, the plain-language About page, and the unlisted listening study (rate/).
-  build: { rollupOptions: { input: { main: "index.html", about: "about.html", rate: "rate/index.html" } } },
+  // Pages: the app, the plain-language About page, the unlisted listening study (rate/) and the trial second version (v2/).
+  build: { rollupOptions: { input: { main: "index.html", about: "about.html", rate: "rate/index.html", v2: "v2/index.html" } } },
 });

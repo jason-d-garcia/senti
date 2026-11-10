@@ -137,6 +137,13 @@ npm run build    # static site in dist/ (relative paths)
 Add `?embed` (or `#embed`) to the URL to hide the header and method notes, for embedding in
 the portfolio site.
 
+## senti 2 (trial)
+
+`/v2` is a second take on the same idea, kept apart from the main page (`v2/index.html`, `src/v2/`). You still drag
+a dot to how you feel, and the page takes that feeling's colour. You can add a second dot for where you want to end
+up, and it lines up six songs that step from one feeling to the other. It only uses the songs that already have a
+preview and an audio score, so nothing is looked up while you listen.
+
 ## Spotify
 
 Each song links to `open.spotify.com/search/<title artist>`, which works without an API key

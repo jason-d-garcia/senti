@@ -26,7 +26,7 @@ export interface Vote {
   /** The model's position for the song, kept with the vote for retraining. */
   model?: { v: number; a: number };
   /** Which page the vote came from. */
-  source?: "minimal" | "classic";
+  source?: "minimal" | "classic" | "v2";
 }
 
 /** The model's prediction counts like this many listener placements. */
