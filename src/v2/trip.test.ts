@@ -17,6 +17,20 @@ describe("buildQueue", () => {
     expect(q[0].valence).toBeLessThan(-0.6);
     expect(q[5].valence).toBeGreaterThan(0.6);
   });
+  it("never repeats a song, even when the trip goes nowhere", () => {
+    const here = { valence: 0.2, arousal: 0.1 };
+    expect(new Set(buildQueue(grid, here, here).map((s) => s.id)).size).toBe(6);
+  });
+  it("between equally placed songs, keeps neighbours close in era and by different artists", () => {
+    // Two songs at every waypoint: one from the 1960s, one from the 2010s.
+    const from = { valence: -0.5, arousal: 0 }, to = { valence: 0.5, arousal: 0 };
+    const pairs = waypoints(from, to).flatMap((p, i) => [{ ...p, year: 1962 + i, artist: `old ${i}` }, { ...p, year: 2012 + i, artist: `new ${i}` }]);
+    const years = buildQueue(pairs, from, to).map((s) => s.year);
+    expect(years.every((y) => y < 2000) || years.every((y) => y > 2000)).toBe(true);
+    const twins = waypoints(from, to).flatMap((p) => [{ ...p, year: 1970, artist: "A" }, { ...p, year: 1970, artist: "B" }]);
+    const artists = buildQueue(twins, from, to).map((s) => s.artist);
+    for (let i = 1; i < artists.length; i++) expect(artists[i]).not.toBe(artists[i - 1]);
+  });
   it("is repeatable for a seed and changes with it", () => {
     const from = { valence: 0.1, arousal: 0.05 };
     const ids = (seed: number) => buildQueue(grid, from, null, seed).map((s) => s.id).join();

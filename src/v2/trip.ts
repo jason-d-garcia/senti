@@ -18,7 +18,7 @@ export const clampPt = (p: Pt): Pt => ({
 export const feelingAt = (p: Pt) => (emotionAt(p.valence, p.arousal)?.name ?? "Mixed").toLowerCase();
 
 /** Distances are taken on the map as drawn, so "near" matches what the eye sees. */
-const dist = (a: Pt, b: Pt) =>
+export const dist = (a: Pt, b: Pt) =>
   Math.hypot((a.valence - b.valence) / EXTENT.valence, (a.arousal - b.arousal) / EXTENT.arousal);
 
 /** A repeatable number in [0, 1) for a song and a shuffle count. */
@@ -36,22 +36,31 @@ export function waypoints(from: Pt, to: Pt, n = STOPS): Pt[] {
   });
 }
 
+/** What the trip looks at in a song: where it sits, and (when known) its year and artist. */
+export type Stop = Pt & { year?: number; artist?: string };
+
+/** How many of the nearest songs each waypoint chooses between. */
+const CANDIDATES = 24;
 /**
- * The songs to play. With no destination: the `n` songs nearest the feeling (the next `n` after `skip`).
- * With one: for each waypoint, the nearest song not already taken. A shuffle seed above 0 loosens "nearest"
- * a little so another press gives another set.
+ * What a trip is scored on, in map units. Each song should sit near its waypoint; each step between songs should
+ * look like the step between their waypoints (so the trip doesn't double back or zigzag); and neighbours should
+ * not be decades apart or by the same artist.
  */
-export function buildQueue<T extends Pt>(songs: T[], from: Pt, to: Pt | null, seed = 0, n = STOPS, skip = 0): T[] {
-  if (!songs.length) return [];
-  const loose = seed > 0 ? 0.12 : 0;
-  const score = (s: T, i: number, p: Pt) => dist(s, p) + loose * jitter(i, seed);
-  if (!to) {
-    const ranked = songs.map((s, i) => ({ s, d: score(s, i, from) })).sort((a, b) => a.d - b.d);
-    const start = ranked.length > n ? skip % (ranked.length - n + 1) : 0;
-    return ranked.slice(start, start + n).map((x) => x.s);
-  }
+export const WEIGHTS = { place: 1, step: 0.7, era: 0.15, sameArtist: 0.2 };
+const ERA_SPAN = 30;
+
+/** The cost of playing `b` straight after `a`, when the waypoints moved by `ideal` between them. */
+function stepCost(a: Stop, b: Stop, ideal: Pt): number {
+  const off = Math.hypot(((b.valence - a.valence) - ideal.valence) / EXTENT.valence, ((b.arousal - a.arousal) - ideal.arousal) / EXTENT.arousal);
+  const era = a.year && b.year ? Math.min(1, Math.abs(a.year - b.year) / ERA_SPAN) : 0.5;
+  const artist = a.artist && a.artist === b.artist ? 1 : 0;
+  return WEIGHTS.step * off + WEIGHTS.era * era + WEIGHTS.sameArtist * artist;
+}
+
+/** The old way, kept as a fallback and for comparison: each waypoint takes its nearest song not already taken. */
+export function greedyTrip<T extends Pt>(songs: T[], points: Pt[], score: (s: T, i: number, p: Pt) => number): T[] {
   const taken = new Set<number>();
-  return waypoints(from, to, Math.min(n, songs.length)).map((p) => {
+  return points.map((p) => {
     let best = -1, bestD = Infinity;
     for (let i = 0; i < songs.length; i++) {
       if (taken.has(i)) continue;
@@ -61,6 +70,66 @@ export function buildQueue<T extends Pt>(songs: T[], from: Pt, to: Pt | null, se
     taken.add(best);
     return songs[best];
   });
+}
+
+/**
+ * The trip as a whole, not one stop at a time: each waypoint offers its nearest songs, and a shortest-path pass
+ * (Viterbi) picks one per waypoint so that the total of place and step costs is smallest. The pass only sees
+ * neighbours, so a song can still come back two stops later; when it does, it is barred from the later stop and
+ * the pass runs again.
+ */
+function smoothTrip<T extends Stop>(songs: T[], points: Pt[], score: (s: T, i: number, p: Pt) => number): T[] | null {
+  const k = Math.min(CANDIDATES, songs.length);
+  const pools = points.map((p) => {
+    const d = songs.map((s, i) => score(s, i, p));
+    return Array.from(d.keys()).sort((a, b) => d[a] - d[b]).slice(0, k).map((i) => ({ i, place: WEIGHTS.place * d[i] }));
+  });
+  for (let attempt = 0; attempt < 40; attempt++) {
+    if (pools.some((pool) => !pool.length)) return null;
+    let cost = pools[0].map((c) => c.place);
+    const back: number[][] = [];
+    for (let s = 1; s < pools.length; s++) {
+      const ideal = { valence: points[s].valence - points[s - 1].valence, arousal: points[s].arousal - points[s - 1].arousal };
+      const next: number[] = [], from: number[] = [];
+      for (const c of pools[s]) {
+        let best = Infinity, arg = 0;
+        pools[s - 1].forEach((prev, j) => {
+          if (prev.i === c.i) return;
+          const v = cost[j] + stepCost(songs[prev.i], songs[c.i], ideal);
+          if (v < best) { best = v; arg = j; }
+        });
+        next.push(best + c.place); from.push(arg);
+      }
+      cost = next; back.push(from);
+    }
+    let at = cost.indexOf(Math.min(...cost));
+    if (!Number.isFinite(cost[at])) return null;
+    const path = [at];
+    for (let s = back.length - 1; s >= 0; s--) { at = back[s][at]; path.unshift(at); }
+    const picked = path.map((j, s) => pools[s][j].i);
+    const repeat = picked.findIndex((i, s) => picked.indexOf(i) < s);
+    if (repeat < 0) return picked.map((i) => songs[i]);
+    pools[repeat] = pools[repeat].filter((c) => c.i !== picked[repeat]);
+  }
+  return null;
+}
+
+/**
+ * The songs to play. With no destination: the `n` songs nearest the feeling (the next `n` after `skip`).
+ * With one: one song per waypoint, chosen together so the trip moves steadily (see smoothTrip). A shuffle seed
+ * above 0 loosens "nearest" a little so another press gives another set.
+ */
+export function buildQueue<T extends Stop>(songs: T[], from: Pt, to: Pt | null, seed = 0, n = STOPS, skip = 0): T[] {
+  if (!songs.length) return [];
+  const loose = seed > 0 ? 0.12 : 0;
+  const score = (s: T, i: number, p: Pt) => dist(s, p) + loose * jitter(i, seed);
+  if (!to) {
+    const ranked = songs.map((s, i) => ({ s, d: score(s, i, from) })).sort((a, b) => a.d - b.d);
+    const start = ranked.length > n ? skip % (ranked.length - n + 1) : 0;
+    return ranked.slice(start, start + n).map((x) => x.s);
+  }
+  const points = waypoints(from, to, Math.min(n, songs.length));
+  return smoothTrip(songs, points, score) ?? greedyTrip(songs, points, score);
 }
 
 type RGB = [number, number, number];

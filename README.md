@@ -141,7 +141,9 @@ the portfolio site.
 
 `/v2` is a second take on the same idea, kept apart from the main page (`v2/index.html`, `src/v2/`). You still drag
 a dot to how you feel, and the page takes that feeling's colour. You can add a second dot for where you want to end
-up, and it lines up six songs that step from one feeling to the other. It only uses the songs that already have a
+up, and it lines up six songs that step from one feeling to the other. The six are chosen together by a
+shortest-path pass (`src/v2/trip.ts`): each sits near its point on the line, each step between songs should look like
+the step along the line, and neighbours shouldn't be decades apart or by the same artist. It only uses the songs that already have a
 preview and an audio score, so nothing is looked up while you listen.
 
 ## Spotify
