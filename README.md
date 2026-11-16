@@ -113,8 +113,7 @@ flowchart LR
 ├── paper/                LaTeX source, references and figure script for the report
 ├── tests/                Python unit tests (study statistics, fusion blend)
 ├── index.html  about.html  rate/  v2/   page entry points (Vite multi-page build)
-├── requirements.txt      pinned Python deps for the research scripts
-└── requirements-dev.txt  pinned Python deps for lint + tests (CI)
+└── requirements/         pinned Python deps: research.txt (scripts) and dev.txt (lint + tests, CI)
 ```
 
 ## Reproduce
@@ -130,7 +129,7 @@ npm test             # Vitest: mood regions, blend/explain, search, ratings, tri
 npm run typecheck    # tsc --noEmit
 npm run build        # static multi-page site in dist/
 
-pip install -r requirements-dev.txt
+pip install -r requirements/dev.txt
 ruff check .         # Python lint
 pytest -q tests      # Python unit tests
 ```
@@ -153,7 +152,7 @@ Search API, cached in `data/previews.jsonl`) and export `data/catalog_previews.c
 ### Report figures
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements/research.txt
 cd paper && python make_figures.py --repo ..    # writes figures/*.pdf from the committed CSVs
 ```
 
