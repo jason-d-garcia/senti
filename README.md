@@ -212,7 +212,8 @@ Built by Jason Garcia.
   previews and artwork from the iTunes Search API; Spotify links use public search URLs.
 - **Affect model:** Russell (1980); Feldman Barrett & Russell (1998); Posner, Russell & Peterson (2005).
 
-**License:** no license file has been added yet, so the code is all rights reserved by default. The data licences
-above apply to the data regardless.
+**License:** the code is released under the [MIT License](LICENSE). Data keeps its own licence: MERGE-derived files
+in `data/` are CC BY-NC 4.0 as noted above, and song lyrics, audio previews and listener-study responses are not
+redistributed under MIT.
 
 Future ideas: [ROADMAP.md](ROADMAP.md).
