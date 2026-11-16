@@ -1,8 +1,46 @@
+# Node / Vite
 node_modules
 dist
-*.bin
+*.tsbuildinfo
+.vercel
+
+# Secrets: never commit these (Vercel/Upstash/Modal/Genius tokens live in env vars)
+.env
+.env.*
+!.env.example
+
+# Python
 __pycache__
+*.pyc
+.venv
+venv
+.pytest_cache
+.ruff_cache
+.ipynb_checkpoints
+
+# Model weights and fitted heads (too large for git; trained locally, on Colab or on Modal)
+*.bin
+*.pt
+*.safetensors
+*.joblib
+
+# Lyrics are copyrighted and are never committed
 lyrics*.csv
+va_lyrics*.csv
+va_overlap*.csv
 songs.csv
 *.xlsx
 data-raw
+
+# Generated training/eval outputs and private exports
+va_report.json
+va_test_predictions.csv
+data/catalog_previews.csv
+senti_ratings*.csv
+votes*.csv
+paper/figures/*.png
+
+# OS / editor
+.DS_Store
+.idea
+.vscode

@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "shards": "vite-node scripts/songs.ts shards"
   },
   "dependencies": {
-    "@vercel/analytics": "^2.0.1",
+    "@vercel/analytics": "2.0.1",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },

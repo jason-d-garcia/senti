@@ -9,8 +9,6 @@ ascenders reach y = -ASC, descenders y = XH + DESC.
 """
 from __future__ import annotations
 
-import math
-
 XH, ASC, DESC = 22, 10, 8          # compact: wide, low letters
 R = 7                              # one corner radius everywhere
 SW = 5.0                           # stroke weight
@@ -244,7 +242,7 @@ def outline(paths, dots, x_off):
     return unary_union(shapes) if shapes else None
 
 def draw(pen, geom):
-    from shapely.geometry import Polygon, MultiPolygon
+    from shapely.geometry import Polygon
     from shapely.geometry.polygon import orient
     polys = [geom] if isinstance(geom, Polygon) else list(getattr(geom, "geoms", []))
     for poly in polys:

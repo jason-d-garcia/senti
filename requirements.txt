@@ -1,0 +1,10 @@
+# Python environment for the research scripts that run locally (train_va.py, compare_study.py,
+# paper/make_figures.py). torch / transformers / scikit-learn match the versions pinned in the Modal
+# images (scripts/modal_*.py); the audio head (audio_head.joblib) was pickled with scikit-learn 1.6.1.
+# The Modal scripts build their own images and only need `pip install modal` locally.
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.6.1
+torch==2.4.1
+transformers==4.45.2
+matplotlib==3.9.4

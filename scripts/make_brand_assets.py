@@ -11,7 +11,6 @@ import sys
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from shapely.geometry import LineString, Point, box
-from shapely.ops import unary_union
 
 sys.path.insert(0, os.path.dirname(__file__))
 import make_senti_font as sf  # noqa: E402
