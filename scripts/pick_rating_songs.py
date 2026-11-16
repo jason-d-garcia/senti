@@ -8,7 +8,9 @@ title, artist, half, the model's placement, and the stored preview when there is
 
     python3 scripts/pick_rating_songs.py
 """
-import glob, json, math
+import glob
+import json
+import math
 
 CELL, N = 0.105, 100
 # Known instrumentals: marked so they are never used as a hidden repeat (repeats should test songs with lyrics).

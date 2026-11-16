@@ -1,0 +1,5 @@
+# Lightweight environment for CI: lint + the Python unit tests. No GPU, no model weights.
+numpy==1.26.4
+pandas==2.2.3
+pytest==8.3.4
+ruff==0.8.6

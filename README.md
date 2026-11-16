@@ -1,153 +1,218 @@
 # senti
 
-*Formerly Moodify. "senti" is Italian for "you feel" or "listen", from* sentire.
+[![CI](https://github.com/jason-d-garcia/senti/actions/workflows/ci.yml/badge.svg)](https://github.com/jason-d-garcia/senti/actions/workflows/ci.yml)
 
-Drag a point around a valence/arousal mood map and get songs that match, each with a
-Spotify link. No login.
+**Live: [playsenti.com](https://playsenti.com)** · **Report: [*Lyrics for Meaning, Audio for Energy*](public/senti-report.pdf) (7 pages)**
 
-Song positions come from the four-class BERT lyrics classifier in
-[bert-lyrics-sentiment-analysis](https://github.com/jason-d-garcia/bert-lyrics-sentiment-analysis)
-(labels `happy=0, sad=1, angry=2, relaxed=3`, from `dataset.py`).
+senti is a mood-based music discovery app: drag a point across a valence (feels bad → feels good) by arousal
+(calm → wired) map and get songs with that feeling, with 30-second previews and Spotify links, no login. The map
+places 5,411 Billboard year-end Hot 100 songs (1960–2025) using a fine-tuned **BERT** lyrics regressor blended with
+a ridge head on frozen **MERT** audio embeddings of each song's preview. On the held-out MERGE benchmark, adding
+audio raises arousal correlation from 0.61 to 0.77; in a 15-rater listening study it raises arousal agreement with
+listeners from 0.57 to 0.85. The front end is React + TypeScript + Vite on Vercel, with listener ratings stored in
+Upstash Redis. *"senti" is Italian for "you feel" / "listen" (from* sentire*); the project was formerly called Moodify.*
 
-## The map
+## Results
 
-The map follows Russell's circumplex model of affect: valence (how pleasant, shown as
-"Feels bad" to "Feels good") on the x axis and arousal (how activated, "Calm" to "Wired") on
-the y axis. It is cut into the 16 emotion words from Feldman Barrett & Russell (1998), as
-reproduced in Posner, Russell & Peterson (2005): four per quadrant, drawn as equal 22.5°
-slices (the published figure is schematic, so the equal spacing is a simplification).
+All numbers are Pearson r between predicted and reference valence/arousal. Bracketed ranges are 95% paired-bootstrap
+intervals over songs. Full tables: [`data/README.md`](data/README.md) and the [report](public/senti-report.pdf).
 
-| Quadrant | Sections, counter-clockwise |
-|---|---|
-| Feels good + wired | Happy, Elated, Excited, Alert |
-| Feels bad + wired | Tense, Nervous, Stressed, Upset |
-| Feels bad + calm | Sad, Depressed, Lethargic, Fatigued |
-| Feels good + calm | Calm, Relaxed, Serene, Contented |
+**1. MERGE benchmark** (held-out test split, seed-42 80/10/10, labels from AllMusic tags via word norms, not listeners)
 
-Points within 0.2 of the centre are labelled *Mixed*. A song's emotion is the section its
-position falls in.
+| Model | Test songs | Valence r | Arousal r |
+|---|---|---|---|
+| Original 4-class classifier, mapped to the circle | 256 | 0.462 | 0.106 |
+| BERT-base lyrics regressor (live) | 256 | 0.724 | 0.605 |
+| BERT-base lyrics regressor (live) | 206 with audio | 0.716 | 0.611 |
+| Audio only: ridge on frozen MERT-v1-95M layer 6 | 206 with audio | 0.683 | 0.750 |
+| **Lyrics + audio blend (live)** | 206 with audio | **0.770** | **0.765** |
+| Gain of blend over lyrics only | 206 with audio | +0.054 [+0.017, +0.095] | +0.154 [+0.081, +0.235] |
 
-## How songs are placed
+**2. Listening study** (own study: 15 raters, 100 songs, 438 first-listen placements; reference = median listener
+placement)
 
-A BERT regressor (bert-base-cased, pooled output → dropout → linear → tanh) reads each song's
-lyrics and predicts valence and arousal directly, each in [−1, 1]. The song's emotion is the
-section that point falls in. Code: `scripts/train_va.py`.
-
-Earlier versions used a four-class MoodyLyrics classifier mapped to the circle by expected
-quadrant position (`valence = p(happy) + p(relaxed) − p(angry) − p(sad)`, and likewise for
-arousal). That placed confident songs near the diagonals and left 6 of the 16 sections empty,
-which is why the map now uses the regressor. The classifier catalog is in git history
-(commit b2b2547) and the app still renders it if `source` is `"bert"`.
-
-Songs whose 30-second preview was scored by the audio model (MERT, `data/catalog_audio_scores.csv`) sit at a
-linear blend of the two: feel = 0.65 × lyrics + 0.61 × sound, energy = 0.14 × lyrics + 1.02 × sound, with the
-weights fitted on MERGE. `scripts/songs.ts` fits the weights back from the CSV (and fails if any row doesn't follow
-them) and writes them into each shard with every song's lyrics and sound scores. The song card's **Why here?** panel
-uses them to show where each source alone would put the song, whether they agreed or pulled opposite ways on each
-axis, and the nearest songs by lyrics alone and by sound alone; in Discover the two spots are drawn on the map. Lyrics
-are never stored or shown, only the models' scores. Songs without an audio score are placed by their lyrics alone.
-
-## Data
-
-`src/data/catalog.json` holds **held-out test songs** from MERGE, with predicted
-`valence`/`arousal` and the dataset's own scores in `true_valence`/`true_arousal`. The model
-never saw any of them in training. 2 of the 256 test songs are left out of the public demo
-because of their titles.
-
-MERGE's valence and arousal come from each song's AllMusic mood tags mapped through the
-Warriner word norms, not from listeners rating each song, so they are a noisy target.
-
-| Test split (256 songs) | Valence | Arousal |
+| Measure | Valence | Arousal |
 |---|---|---|
-| Pearson r | 0.724 | 0.605 |
-| R² | 0.520 | 0.358 |
-| MAE | 0.227 | 0.180 |
-| Pearson r, four-class classifier mapped to the circle | 0.462 | 0.106 |
+| Lyrics only → lyrics + audio, r with listeners | 0.63 → 0.65 (within noise) | **0.57 → 0.85**, gain +0.28 [+0.17, +0.39] |
+| Rater test-retest reliability (hidden repeats) | 0.73 | 0.70 |
 
-Split: 80/10/10 stratified by quadrant, seed 42, 2,044 training songs; 5 epochs, AdamW 2e-5,
-10% warmup. Predictions are pulled toward the centre (MERGE arousal has a narrow range), and
-the predicted quadrant matches the tagged quadrant for 176 of the 254 test songs. The test songs
-leave Nervous and Tense empty; with the Billboard hits, every one of the 16 sections has songs. Lyrics only: tempo, key and production are not used.
+The blended model sits closer to the leave-one-out crowd consensus than 12 of the 15 individual raters (2-D
+distance 0.38 vs 0.50 for the average rater).
 
-**Attribution.** Valence/arousal labels from MERGE: P. L. Louro, H. Redinho, R. Santos,
-R. Malheiro, R. Panda, R. P. Paiva (2024), *MERGE: A Bimodal Dataset for Static Music Emotion
-Recognition*, [Zenodo 13939205](https://zenodo.org/records/13939205), licensed
-[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Moodify is non-commercial.
-Lyrics were fetched locally for training and inference and are never stored in this repo.
+**Model choices backed by the numbers**
 
-### Billboard hits
+- *Encoders:* DeBERTa-v3-base and RoBERTa-base, trained the same way, were not reliably better than BERT-base, and
+  DeBERTa was significantly worse on arousal (Δr −0.082 [−0.160, −0.007]), so BERT-base stays.
+- *Audio fine-tuning:* fine-tuning MERT end to end (3 seeds on Modal) beat the frozen head on MERGE (valence +0.059,
+  arousal +0.042, both significant) but gave no gain with listeners (blend valence 0.615 vs 0.648, arousal 0.839 vs
+  0.845), so the simpler frozen head stays live.
+- *Whole-song reading:* averaging overlapping 160-token windows instead of reading only the first lifted test r
+  from 0.70 to 0.72 (valence) and 0.56 to 0.60 (arousal).
 
-`src/data/billboard.json` holds 5,411 songs from the Billboard year-end Hot 100, 1960–2025
-(chart lists from Wikipedia), placed by the same model over their whole lyric. Of 6,601 chart
-entries, Genius had usable lyrics for 5,717; songs that charted in several years are kept once,
-under their first year with their best rank. These are predictions only, with no labels to check
-them against. The app loads this file after the page is up.
+## Architecture
 
-Each song is scored over its whole lyric: long lyrics are split into overlapping 160-token
-windows and the predictions are averaged. On the MERGE test songs this lifts correlation from
-0.70 to 0.72 (valence) and 0.56 to 0.60 (arousal) compared with reading only the first window.
-
-### Score files and model comparison
-
-[`data/`](data/README.md) has the whole-song scores as CSV (Billboard hits and the MERGE test
-songs) and a comparison of BERT-base against DeBERTa-v3-base and RoBERTa-base trained the same
-way. With paired-bootstrap intervals over the 256 test songs, neither larger encoder was reliably
-better, and DeBERTa was reliably worse at arousal, so the site keeps BERT-base.
-[`notebooks/colab_va_compare.ipynb`](notebooks/colab_va_compare.ipynb) reproduces the comparison
-on a Colab GPU from your own copy of the data.
-
-`scripts/score_catalog.py` regenerates a four-class catalog from a checkpoint and a local
-`title, artist, lyrics` CSV; lyrics are only read locally and never written to the output.
-
-## Research report
-
-[*Lyrics for Meaning, Audio for Energy*](public/senti-report.pdf) (7 pages) covers the models, the MERGE
-results and the listening study (15 raters, 100 songs): lyrics + audio raises arousal correlation with
-listeners from 0.57 to 0.85, and the blend sits closer to the crowd consensus than 12 of the 15 raters.
-It is served at `/senti-report.pdf`. LaTeX source, references and the figure script are in [`paper/`](paper/);
-the study ratings themselves are not in the repo.
-
-## Listener ratings
-
-"Rate a song" shows one song from the feeling under the dot. A listener can confirm the spot (👍) or
-drag the light to where the song belongs (👎). About a third of prompts are blind: the listener
-places the song before seeing the model's spot, so those ratings aren't anchored to it.
-
-A rated song is shown part of the way between the model's prediction and the listeners' median
-placement. The model counts like 3 listeners, so the dot moves toward listeners as more of them
-agree. Confidence grows with the number of listeners and shrinks with their spread. Medians keep a
-few odd ratings from dragging a song across the map. Each browser can rate a song once, and each IP
-is limited to 20 ratings a minute.
-
-Ratings are stored by `api/feedback.js` in Upstash Redis. To turn sharing on, add Upstash for Redis
-to the Vercel project (Storage > Upstash); it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
-Without it, ratings stay in each visitor's own browser.
-`scripts/export_votes.mjs` writes every placement to CSV (song, spot, blind or not, time) for
-retraining; titles and artists are lowercased.
-
-## Run
-
-```bash
-npm install
-npm run dev      # local dev server
-npm test         # mapping + nearest-neighbour unit tests
-npm run build    # static site in dist/ (relative paths)
+```mermaid
+flowchart LR
+    subgraph offline["Offline scoring (Python: local, Colab, Modal GPUs)"]
+        L["Lyrics<br/>(fetched locally, never stored)"] --> B["BERT-base regressor<br/>160-token windows, averaged"]
+        P["30-s Apple preview"] --> M["MERT-v1-95M (frozen)<br/>layer 6, mean over 5-s slices"]
+        M --> R["Ridge head"]
+        B --> F["Linear blend<br/>fitted on MERGE validation"]
+        R --> F
+    end
+    F --> CSV["data/catalog_audio_scores.csv<br/>src/data/billboard.json"]
+    CSV --> S["scripts/songs.ts shards"]
+    S --> J["public/songs/*.json<br/>(one static shard per emotion)"]
+    subgraph web["Web app (Vercel)"]
+        J --> UI["React + TypeScript (Vite)<br/>mood map, Why here?, /v2"]
+        UI <--> API["Serverless functions<br/>api/feedback, api/rate, api/vibes"]
+        API <--> K[("Upstash Redis<br/>listener ratings")]
+    end
 ```
 
-Add `?embed` (or `#embed`) to the URL to hide the header and method notes, for embedding in
-the portfolio site.
+- **Lyrics model.** `bert-base-cased` pooled output → dropout (0.3) → linear → tanh, predicting valence and arousal in
+  [−1, 1]. Trained with MSE, AdamW 2e-5, 10% warm-up, 5 epochs, batch 8, on 2,044 MERGE songs. At inference a lyric is
+  cut into 160-token windows (stride 120, at most 8) and the predictions are averaged.
+- **Audio model.** Frozen MERT-v1-95M, layer 6, averaged over 5-second slices of the 30-second preview; a ridge
+  regression maps the embedding to valence and arousal.
+- **Fusion.** `valence = 0.65 × lyrics + 0.61 × audio`, `arousal = 0.14 × lyrics + 1.02 × audio` (plus small biases),
+  fitted on MERGE validation songs. Audio carries energy; lyrics carry most of the meaning. 2,568 catalogue songs have
+  an audio score; the rest are placed by lyrics alone.
+- **The map.** Russell's circumplex, cut into the 16 emotion words of Feldman Barrett & Russell (1998) as reproduced
+  in Posner, Russell & Peterson (2005): four per quadrant, as equal 22.5° slices (a simplification of the schematic
+  published figure). Points within 0.2 of the centre are *Mixed*.
 
-## senti 2 (trial)
+  | Quadrant | Sections, counter-clockwise |
+  |---|---|
+  | Feels good + wired | Happy, Elated, Excited, Alert |
+  | Feels bad + wired | Tense, Nervous, Stressed, Upset |
+  | Feels bad + calm | Sad, Depressed, Lethargic, Fatigued |
+  | Feels good + calm | Calm, Relaxed, Serene, Contented |
 
-`/v2` is a second take on the same idea, kept apart from the main page (`v2/index.html`, `src/v2/`). You still drag
-a dot to how you feel, and the page takes that feeling's colour. You can add a second dot for where you want to end
-up, and it lines up six songs that step from one feeling to the other. It only uses the songs that already have a
-preview and an audio score, so nothing is looked up while you listen.
+- **Why here?** Each song card shows where the lyrics alone and the audio alone would put the song, whether they
+  agreed, and the nearest songs by each source.
+- **Listener ratings.** Visitors can confirm a song's spot or drag it elsewhere; about a third of prompts are blind
+  (placed before the model's spot is shown). A rated song is shown between the model's prediction and the listeners'
+  median, with the model counting as 3 listeners. One rating per song per browser, 20 per minute per IP.
+- **senti 2 (trial, `/v2`).** Pick where you are and where you want to end up; a dynamic-programming pass lines up six
+  previewed songs that step from one feeling to the other.
 
-## Spotify
+## Repository layout
 
-Each song links to `open.spotify.com/search/<title artist>`, which works without an API key
-or user login. Exact track IDs and in-page playback are a later step and need the Spotify
-Web API.
+```
+.
+├── src/                  React + TypeScript app (mood mapping, search, explain, ratings) and its Vitest tests
+│   ├── minimal/          default view;  App.tsx is the classic view (?classic)
+│   ├── rate/  v2/        listening-study page and the senti 2 trial
+│   └── data/             MERGE test-song catalogue and Billboard whole-song scores (JSON)
+├── api/                  Vercel serverless functions (ratings, study, vibe tags) backed by Upstash Redis
+├── public/               static assets, report PDF, and songs/<emotion>.json map shards
+├── scripts/              training, scoring, data-building and asset scripts (Python + TypeScript)
+├── notebooks/            Colab notebooks: encoder comparison, audio fusion, catalogue audio scoring
+├── data/                 score CSVs, encoder comparison, fine-tuning results (see data/README.md)
+├── paper/                LaTeX source, references and figure script for the report
+├── tests/                Python unit tests (study statistics, fusion blend)
+├── index.html  about.html  rate/  v2/   page entry points (Vite multi-page build)
+└── requirements/         pinned Python deps: research.txt (scripts) and dev.txt (lint + tests, CI)
+```
 
-Future ideas are listed in [ROADMAP.md](ROADMAP.md).
+## Reproduce
+
+### Web app, tests and lint (no GPU, no secrets)
+
+Node 22 and Python 3.11 are what CI uses.
+
+```bash
+npm ci
+npm run dev          # local dev server
+npm test             # Vitest: mood regions, blend/explain, search, ratings, trips
+npm run typecheck    # tsc --noEmit
+npm run build        # static multi-page site in dist/
+
+pip install -r requirements/dev.txt
+ruff check .         # Python lint
+pytest -q tests      # Python unit tests
+```
+
+Without Upstash configured, ratings stay in each visitor's browser. To share them, add Upstash for Redis to the Vercel
+project (Storage > Upstash), which sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`. Add `?embed` to the URL to hide the
+header and method notes.
+
+### Rebuild the map from the committed scores
+
+```bash
+npm run shards       # = npx vite-node scripts/songs.ts shards
+git diff --stat public/songs    # empty: the shards are reproduced byte for byte (checked in CI)
+```
+
+`scripts/songs.ts` refits the fusion weights from `data/catalog_audio_scores.csv`, fails if any row does not follow
+them, and writes `public/songs/<emotion>.json`. Its `prefetch` and `audio-csv` subcommands look up previews (iTunes
+Search API, cached in `data/previews.jsonl`) and export `data/catalog_previews.csv` for audio scoring.
+
+### Report figures
+
+```bash
+pip install -r requirements/research.txt
+cd paper && python make_figures.py --repo ..    # writes figures/*.pdf from the committed CSVs
+```
+
+Study figures are recomputed only when you pass `--ratings senti_ratings.csv`; the study ratings are not in the repo.
+
+### Training and evaluation (needs data that is not redistributed, and a GPU)
+
+Lyrics are copyrighted and are never committed, so training starts from your own `va_lyrics.csv`: MERGE's
+valence/arousal labels joined with lyrics you fetch yourself (columns `title, artist, lyrics, valence, arousal,
+quadrant`). The join itself is not scripted in this repo.
+
+```bash
+# Lyrics regressor. Run from a checkout of github.com/jason-d-garcia/bert-lyrics-sentiment-analysis,
+# because train_va.py imports its dataset.py and model.py (for the 4-class baseline).
+python /path/to/senti/scripts/train_va.py --data va_lyrics.csv --cls_checkpoint best_model_state.bin
+#   -> va_model_state.bin, va_report.json, va_test_predictions.csv (seed 42, 5 epochs, lr 2e-5, batch 8, 160 tokens)
+```
+
+| Step | How |
+|---|---|
+| Encoder comparison (DeBERTa-v3, RoBERTa) | [`notebooks/colab_va_compare.ipynb`](notebooks/colab_va_compare.ipynb) on a Colab GPU |
+| Audio head + fusion weights on MERGE | [`notebooks/colab_audio_fusion.ipynb`](notebooks/colab_audio_fusion.ipynb) (writes `audio_head.joblib`) |
+| Score the catalogue with audio | `modal run scripts/modal_catalog.py --previews data/catalog_previews.csv --head audio_head.joblib --out data/catalog_audio_scores.csv` (or [`notebooks/colab_audio_catalog.ipynb`](notebooks/colab_audio_catalog.ipynb)) |
+| Fine-tune MERT end to end | `modal run scripts/modal_finetune.py --lyrics va_lyrics.csv --bert va_model_state.bin --head audio_head.joblib --previews data/catalog_previews.csv` (`--trial` for a cheap check) |
+| Compare with the listening study | `python scripts/compare_study.py --ratings senti_ratings.csv` (needs the study export) |
+
+The Modal scripts need `pip install modal` and a Modal account; they pin their own GPU images
+(torch 2.4.1, transformers 4.45.2, scikit-learn 1.6.1).
+
+## Limitations
+
+- **Small convenience sample.** The listening study has 15 raters (recruited from personal networks) and 100 songs,
+  so valence differences of a few hundredths are within noise and the raters are not representative of all
+  listeners. The ratings are not in this repo.
+- **Noisy benchmark labels.** MERGE's valence/arousal come from AllMusic mood tags mapped through word norms, not from
+  listeners rating each song. Audio-only valence is r 0.68 on MERGE but only 0.35 against the study's listeners.
+- **Preview, not song.** Audio is scored from a 30-second preview; listeners in the study heard a median of 9 seconds.
+- **Partial audio coverage.** 2,568 of 5,411 catalogue songs have an audio score; the rest are lyrics-only.
+- **Billboard positions are predictions.** There are no reference labels for the catalogue itself; individual songs
+  can be misplaced, and averages are more reliable than single songs.
+- **Equal slices.** The 16 sections use equal 22.5° slices, a simplification of the circumplex figure.
+- **Reproducibility boundary.** Training needs lyrics and MERGE audio that cannot be redistributed, plus a GPU; CI
+  checks the code paths and the committed numbers, not retraining.
+
+## Credits and license
+
+Built by Jason Garcia.
+
+- **MERGE** labels: P. L. Louro, H. Redinho, R. Santos, R. Malheiro, R. Panda, R. P. Paiva (2024), *MERGE: A Bimodal
+  Dataset for Static Music Emotion Recognition*, [Zenodo 13939205](https://zenodo.org/records/13939205),
+  [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). MERGE-derived files in `data/` are redistributed
+  under that licence for non-commercial use; senti is non-commercial.
+- **Models:** [`bert-base-cased`](https://huggingface.co/bert-base-cased) and
+  [`m-a-p/MERT-v1-95M`](https://huggingface.co/m-a-p/MERT-v1-95M). The earlier 4-class model is
+  [bert-lyrics-sentiment-analysis](https://github.com/jason-d-garcia/bert-lyrics-sentiment-analysis).
+- **Catalogue:** Billboard year-end Hot 100 lists from Wikipedia; lyrics read locally from Genius and never stored;
+  previews and artwork from the iTunes Search API; Spotify links use public search URLs.
+- **Affect model:** Russell (1980); Feldman Barrett & Russell (1998); Posner, Russell & Peterson (2005).
+
+**License:** no license file has been added yet, so the code is all rights reserved by default. The data licences
+above apply to the data regardless.
+
+Future ideas: [ROADMAP.md](ROADMAP.md).

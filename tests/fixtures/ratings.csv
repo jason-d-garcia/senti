@@ -1,0 +1,12 @@
+rater,song,v,a,repeat,skipped
+r1,A|x,0.5,0.5,0,0
+r2,A|x,0.7,0.1,0,0
+r3,A|x,0.9,0.3,0,0
+r1,B|y,-0.5,-0.5,false,false
+r2,B|y,-0.1,-0.3,false,false
+r3,B|y,,,false,true
+r1,A|x,0.4,0.6,1,0
+r1,C|z,0.2,0.2,0,0
+r2,C|z,0.3,0.1,0,0
+r3,C|z,0.1,-0.2,0,0
+r4,C|z,0.0,0.0,0,1

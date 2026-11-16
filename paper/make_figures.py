@@ -94,9 +94,9 @@ def fig_r_bars(study_r=STUDY_R, study_ci=STUDY_CI) -> None:
         ax.set_ylim(0, 1)
         ax.grid(axis="x", visible=False)
     axes[0].set_ylabel("Pearson r")
-    h, l = axes[0].get_legend_handles_labels()
+    h, labels = axes[0].get_legend_handles_labels()
     fig.tight_layout(w_pad=1, rect=(0, 0, 1, 0.9))
-    fig.legend(h[:3], l[:3], loc="upper center", ncol=3, bbox_to_anchor=(0.5, 1.0), handlelength=1, columnspacing=1.5)
+    fig.legend(h[:3], labels[:3], loc="upper center", ncol=3, bbox_to_anchor=(0.5, 1.0), handlelength=1, columnspacing=1.5)
     save(fig, "r_bars")
 
 
