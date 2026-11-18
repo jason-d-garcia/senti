@@ -1,6 +1,6 @@
 # Phase 1 results: cross-modal emotion representations
 
-3 seed(s); mean ± sd over seeds. Probe r on the MERGE test songs. Config: {'d': 256, 'layers': 2, 'lr': 0.0003, 'epochs': 40, 'p_drop': 0.25, 'n_boot': 1000, 'n_rand': 20, 'edit_layer': 0}
+3 seed(s); mean ± sd over seeds. Probe r on the MERGE test songs. Config: {'d': 256, 'layers': 2, 'lr': 0.0003, 'epochs': 40, 'p_drop': 0.25, 'n_boot': 1000, 'n_rand': 20, 'edit_layer': 0, 'controls': True}
 
 ## Mid-fusion model: probe transfer by layer (raw shared space)
 
@@ -12,22 +12,22 @@ Layer 0 = mean of projected input tokens before any fusion; layers 1-2 = CLS aft
 | net | layer | lyrics→lyrics | audio→audio | lyrics→audio | audio→lyrics | shuffled | independence |
 |---|---|---|---|---|---|---|---|
 | trained | 0 | 0.69 ± 0.00 | 0.67 ± 0.00 | 0.65 ± 0.01 | 0.68 ± 0.02 | 0.11 ± 0.45 | 0.98 ± 0.02 |
-| trained | 1 | 0.68 ± 0.00 | 0.70 ± 0.00 | 0.68 ± 0.00 | 0.66 ± 0.02 | 0.20 ± 0.60 | 0.97 ± 0.02 |
-| trained | 2 | 0.68 ± 0.00 | 0.70 ± 0.00 | 0.68 ± 0.01 | 0.67 ± 0.01 | -0.07 ± 0.24 | 0.98 ± 0.01 |
-| untrained | 0 | 0.70 ± 0.01 | 0.65 ± 0.02 | 0.03 ± 0.13 | -0.10 ± 0.15 | -0.04 ± 0.11 | -0.05 ± 0.18 |
-| untrained | 1 | 0.69 ± 0.02 | 0.64 ± 0.02 | -0.09 ± 0.12 | 0.21 ± 0.22 | -0.03 ± 0.13 | 0.08 ± 0.24 |
-| untrained | 2 | 0.70 ± 0.01 | 0.62 ± 0.02 | -0.02 ± 0.13 | 0.28 ± 0.07 | 0.14 ± 0.14 | 0.19 ± 0.14 |
+| trained | 1 | 0.68 ± 0.00 | 0.70 ± 0.00 | 0.68 ± 0.00 | 0.66 ± 0.02 | 0.04 ± 0.46 | 0.97 ± 0.02 |
+| trained | 2 | 0.68 ± 0.00 | 0.70 ± 0.00 | 0.68 ± 0.01 | 0.67 ± 0.01 | -0.40 ± 0.15 | 0.98 ± 0.01 |
+| untrained | 0 | 0.70 ± 0.01 | 0.65 ± 0.02 | 0.03 ± 0.13 | -0.10 ± 0.15 | -0.12 ± 0.14 | -0.05 ± 0.18 |
+| untrained | 1 | 0.69 ± 0.02 | 0.64 ± 0.02 | -0.09 ± 0.12 | 0.21 ± 0.22 | -0.13 ± 0.12 | 0.08 ± 0.24 |
+| untrained | 2 | 0.70 ± 0.01 | 0.62 ± 0.02 | -0.02 ± 0.13 | 0.28 ± 0.07 | -0.14 ± 0.10 | 0.19 ± 0.14 |
 
 **arousal**
 
 | net | layer | lyrics→lyrics | audio→audio | lyrics→audio | audio→lyrics | shuffled | independence |
 |---|---|---|---|---|---|---|---|
 | trained | 0 | 0.58 ± 0.00 | 0.74 ± 0.00 | 0.72 ± 0.01 | 0.57 ± 0.01 | 0.20 ± 0.19 | 0.98 ± 0.01 |
-| trained | 1 | 0.56 ± 0.01 | 0.76 ± 0.00 | 0.73 ± 0.01 | 0.51 ± 0.03 | -0.16 ± 0.54 | 0.94 ± 0.02 |
-| trained | 2 | 0.56 ± 0.00 | 0.76 ± 0.00 | 0.73 ± 0.01 | 0.49 ± 0.04 | 0.28 ± 0.54 | 0.93 ± 0.04 |
-| untrained | 0 | 0.58 ± 0.00 | 0.73 ± 0.01 | 0.06 ± 0.32 | 0.24 ± 0.19 | 0.01 ± 0.26 | 0.25 ± 0.38 |
-| untrained | 1 | 0.57 ± 0.01 | 0.72 ± 0.01 | 0.08 ± 0.28 | 0.15 ± 0.13 | -0.02 ± 0.20 | 0.19 ± 0.19 |
-| untrained | 2 | 0.57 ± 0.00 | 0.72 ± 0.00 | 0.03 ± 0.30 | 0.16 ± 0.05 | -0.06 ± 0.30 | 0.16 ± 0.22 |
+| trained | 1 | 0.56 ± 0.01 | 0.76 ± 0.00 | 0.73 ± 0.01 | 0.51 ± 0.03 | 0.53 ± 0.13 | 0.94 ± 0.02 |
+| trained | 2 | 0.56 ± 0.00 | 0.76 ± 0.00 | 0.73 ± 0.01 | 0.49 ± 0.04 | -0.38 ± 0.20 | 0.93 ± 0.04 |
+| untrained | 0 | 0.58 ± 0.00 | 0.73 ± 0.01 | 0.06 ± 0.32 | 0.24 ± 0.19 | -0.17 ± 0.10 | 0.25 ± 0.38 |
+| untrained | 1 | 0.57 ± 0.01 | 0.72 ± 0.01 | 0.08 ± 0.28 | 0.15 ± 0.13 | -0.02 ± 0.07 | 0.19 ± 0.19 |
+| untrained | 2 | 0.57 ± 0.00 | 0.72 ± 0.00 | 0.03 ± 0.30 | 0.16 ± 0.05 | -0.17 ± 0.35 | 0.16 ± 0.22 |
 
 ## Same, after label-free CCA alignment (comparable with late fusion)
 
@@ -39,102 +39,148 @@ matched = CCA fitted on correctly paired training songs. mismatched = control: C
 | model / layer | pairing | lyrics→lyrics | audio→audio | lyrics→audio | audio→lyrics | independence |
 |---|---|---|---|---|---|---|
 | mid fusion L0 | matched | 0.69 ± 0.01 | 0.65 ± 0.01 | 0.63 ± 0.02 | 0.69 ± 0.01 | 0.98 ± 0.00 |
-| mid fusion L0 | mismatched | 0.32 ± 0.09 | 0.30 ± 0.07 | 0.07 ± 0.06 | 0.17 ± 0.08 | 0.41 ± 0.25 |
+| mid fusion L0 | random mismatch | 0.32 ± 0.09 | 0.30 ± 0.07 | 0.07 ± 0.06 | 0.17 ± 0.08 | 0.41 ± 0.25 |
+| mid fusion L0 | same-quadrant mismatch | 0.67 ± 0.02 | 0.65 ± 0.01 | 0.61 ± 0.01 | 0.66 ± 0.01 | 0.97 ± 0.01 |
 | mid fusion L1 | matched | 0.65 ± 0.00 | 0.68 ± 0.00 | 0.65 ± 0.00 | 0.66 ± 0.00 | 0.99 ± 0.00 |
-| mid fusion L1 | mismatched | 0.34 ± 0.04 | 0.28 ± 0.08 | -0.06 ± 0.06 | -0.02 ± 0.05 | -0.12 ± 0.17 |
+| mid fusion L1 | random mismatch | 0.34 ± 0.03 | 0.33 ± 0.00 | -0.02 ± 0.03 | -0.08 ± 0.08 | -0.16 ± 0.17 |
+| mid fusion L1 | same-quadrant mismatch | 0.65 ± 0.01 | 0.67 ± 0.00 | 0.65 ± 0.01 | 0.66 ± 0.01 | 1.00 ± 0.01 |
 | mid fusion L2 | matched | 0.66 ± 0.01 | 0.68 ± 0.01 | 0.65 ± 0.00 | 0.67 ± 0.00 | 0.99 ± 0.00 |
-| mid fusion L2 | mismatched | 0.32 ± 0.02 | 0.37 ± 0.06 | -0.03 ± 0.11 | -0.06 ± 0.07 | -0.13 ± 0.24 |
+| mid fusion L2 | random mismatch | 0.33 ± 0.09 | 0.29 ± 0.05 | -0.00 ± 0.09 | -0.10 ± 0.08 | -0.15 ± 0.30 |
+| mid fusion L2 | same-quadrant mismatch | 0.64 ± 0.01 | 0.68 ± 0.01 | 0.66 ± 0.01 | 0.65 ± 0.02 | 0.98 ± 0.01 |
 | Senti late bert0_mert0 | matched | 0.58 | 0.47 | 0.45 | 0.57 | 0.97 |
-| Senti late bert0_mert0 | mismatched | 0.25 | 0.26 | 0.05 | -0.04 | 0.01 |
+| Senti late bert0_mert0 | random mismatch | 0.25 | 0.26 | 0.05 | -0.04 | 0.01 |
+| Senti late bert0_mert0 | same-quadrant mismatch | 0.58 | 0.49 | 0.49 | 0.57 | 1.00 |
 | Senti late bert0_mert3 | matched | 0.59 | 0.59 | 0.55 | 0.59 | 0.96 |
-| Senti late bert0_mert3 | mismatched | 0.28 | 0.44 | -0.11 | -0.02 | -0.15 |
+| Senti late bert0_mert3 | random mismatch | 0.34 | 0.40 | -0.03 | 0.07 | 0.07 |
+| Senti late bert0_mert3 | same-quadrant mismatch | 0.61 | 0.59 | 0.59 | 0.60 | 1.00 |
 | Senti late bert0_mert6 | matched | 0.63 | 0.63 | 0.61 | 0.61 | 0.97 |
-| Senti late bert0_mert6 | mismatched | 0.42 | 0.19 | 0.05 | 0.04 | 0.19 |
+| Senti late bert0_mert6 | random mismatch | 0.31 | 0.31 | 0.13 | 0.03 | 0.25 |
+| Senti late bert0_mert6 | same-quadrant mismatch | 0.58 | 0.65 | 0.62 | 0.58 | 0.97 |
 | Senti late bert0_mert9 | matched | 0.61 | 0.63 | 0.61 | 0.59 | 0.96 |
-| Senti late bert0_mert9 | mismatched | 0.38 | 0.37 | 0.20 | 0.28 | 0.63 |
+| Senti late bert0_mert9 | random mismatch | 0.38 | 0.34 | -0.02 | -0.09 | -0.15 |
+| Senti late bert0_mert9 | same-quadrant mismatch | 0.59 | 0.63 | 0.59 | 0.57 | 0.96 |
 | Senti late bert0_mert12 | matched | 0.56 | 0.55 | 0.53 | 0.54 | 0.97 |
-| Senti late bert0_mert12 | mismatched | 0.48 | 0.42 | 0.06 | 0.09 | 0.16 |
+| Senti late bert0_mert12 | random mismatch | 0.25 | 0.13 | -0.03 | 0.10 | 0.09 |
+| Senti late bert0_mert12 | same-quadrant mismatch | 0.60 | 0.54 | 0.52 | 0.60 | 0.98 |
 | Senti late bert4_mert0 | matched | 0.67 | 0.48 | 0.46 | 0.62 | 0.94 |
-| Senti late bert4_mert0 | mismatched | 0.37 | 0.25 | 0.03 | -0.05 | -0.01 |
+| Senti late bert4_mert0 | random mismatch | 0.37 | 0.21 | -0.06 | -0.05 | -0.20 |
+| Senti late bert4_mert0 | same-quadrant mismatch | 0.63 | 0.45 | 0.42 | 0.65 | 0.98 |
 | Senti late bert4_mert3 | matched | 0.70 | 0.61 | 0.59 | 0.66 | 0.96 |
-| Senti late bert4_mert3 | mismatched | 0.37 | 0.31 | 0.01 | 0.01 | 0.04 |
+| Senti late bert4_mert3 | random mismatch | 0.39 | 0.32 | 0.03 | 0.15 | 0.25 |
+| Senti late bert4_mert3 | same-quadrant mismatch | 0.65 | 0.60 | 0.59 | 0.64 | 0.98 |
 | Senti late bert4_mert6 | matched | 0.68 | 0.65 | 0.63 | 0.65 | 0.96 |
-| Senti late bert4_mert6 | mismatched | 0.37 | 0.19 | -0.13 | -0.25 | -0.68 |
+| Senti late bert4_mert6 | random mismatch | 0.31 | 0.35 | 0.15 | 0.12 | 0.40 |
+| Senti late bert4_mert6 | same-quadrant mismatch | 0.65 | 0.63 | 0.63 | 0.64 | 0.99 |
 | Senti late bert4_mert9 | matched | 0.68 | 0.64 | 0.62 | 0.65 | 0.97 |
-| Senti late bert4_mert9 | mismatched | 0.34 | 0.35 | 0.01 | 0.00 | 0.02 |
+| Senti late bert4_mert9 | random mismatch | 0.50 | 0.37 | 0.29 | 0.26 | 0.65 |
+| Senti late bert4_mert9 | same-quadrant mismatch | 0.66 | 0.61 | 0.59 | 0.66 | 0.98 |
 | Senti late bert4_mert12 | matched | 0.65 | 0.55 | 0.52 | 0.62 | 0.95 |
-| Senti late bert4_mert12 | mismatched | 0.25 | 0.41 | -0.02 | 0.09 | 0.16 |
+| Senti late bert4_mert12 | random mismatch | 0.54 | 0.44 | -0.26 | -0.04 | -0.33 |
+| Senti late bert4_mert12 | same-quadrant mismatch | 0.62 | 0.55 | 0.54 | 0.60 | 0.97 |
 | Senti late bert8_mert0 | matched | 0.63 | 0.49 | 0.46 | 0.61 | 0.96 |
-| Senti late bert8_mert0 | mismatched | 0.31 | 0.15 | -0.20 | 0.12 | -0.46 |
+| Senti late bert8_mert0 | random mismatch | 0.46 | 0.13 | 0.03 | 0.33 | 0.46 |
+| Senti late bert8_mert0 | same-quadrant mismatch | 0.68 | 0.48 | 0.47 | 0.69 | 1.00 |
 | Senti late bert8_mert3 | matched | 0.66 | 0.62 | 0.60 | 0.66 | 0.98 |
-| Senti late bert8_mert3 | mismatched | 0.38 | 0.35 | -0.09 | -0.13 | -0.30 |
+| Senti late bert8_mert3 | random mismatch | 0.31 | 0.28 | -0.15 | -0.08 | -0.39 |
+| Senti late bert8_mert3 | same-quadrant mismatch | 0.67 | 0.61 | 0.60 | 0.67 | 0.99 |
 | Senti late bert8_mert6 | matched | 0.67 | 0.65 | 0.62 | 0.66 | 0.98 |
-| Senti late bert8_mert6 | mismatched | 0.37 | 0.27 | -0.17 | -0.05 | -0.39 |
+| Senti late bert8_mert6 | random mismatch | 0.42 | 0.32 | -0.00 | -0.01 | -0.02 |
+| Senti late bert8_mert6 | same-quadrant mismatch | 0.64 | 0.64 | 0.62 | 0.64 | 0.99 |
 | Senti late bert8_mert9 | matched | 0.67 | 0.64 | 0.62 | 0.67 | 0.98 |
-| Senti late bert8_mert9 | mismatched | 0.33 | 0.42 | 0.04 | -0.05 | -0.03 |
+| Senti late bert8_mert9 | random mismatch | 0.27 | 0.40 | -0.01 | 0.08 | 0.14 |
+| Senti late bert8_mert9 | same-quadrant mismatch | 0.66 | 0.63 | 0.62 | 0.67 | 0.99 |
 | Senti late bert8_mert12 | matched | 0.60 | 0.56 | 0.54 | 0.59 | 0.98 |
-| Senti late bert8_mert12 | mismatched | 0.35 | 0.33 | 0.08 | -0.01 | 0.10 |
+| Senti late bert8_mert12 | random mismatch | 0.42 | 0.39 | -0.11 | -0.20 | -0.39 |
+| Senti late bert8_mert12 | same-quadrant mismatch | 0.62 | 0.56 | 0.55 | 0.61 | 0.99 |
 | Senti late bert12_mert0 | matched | 0.64 | 0.48 | 0.45 | 0.64 | 0.97 |
-| Senti late bert12_mert0 | mismatched | 0.27 | 0.21 | -0.01 | -0.08 | -0.18 |
+| Senti late bert12_mert0 | random mismatch | 0.34 | 0.28 | 0.03 | -0.09 | -0.07 |
+| Senti late bert12_mert0 | same-quadrant mismatch | 0.66 | 0.49 | 0.47 | 0.64 | 0.96 |
 | Senti late bert12_mert3 | matched | 0.67 | 0.61 | 0.59 | 0.67 | 0.99 |
-| Senti late bert12_mert3 | mismatched | 0.37 | 0.27 | -0.01 | -0.07 | -0.11 |
+| Senti late bert12_mert3 | random mismatch | 0.42 | 0.32 | -0.14 | -0.03 | -0.26 |
+| Senti late bert12_mert3 | same-quadrant mismatch | 0.66 | 0.61 | 0.60 | 0.65 | 0.98 |
 | Senti late bert12_mert6 | matched | 0.69 | 0.66 | 0.63 | 0.68 | 0.98 |
-| Senti late bert12_mert6 | mismatched | 0.37 | 0.42 | 0.08 | 0.11 | 0.24 |
+| Senti late bert12_mert6 | random mismatch | 0.17 | 0.31 | -0.01 | -0.16 | -0.49 |
+| Senti late bert12_mert6 | same-quadrant mismatch | 0.66 | 0.64 | 0.61 | 0.65 | 0.97 |
 | Senti late bert12_mert9 | matched | 0.68 | 0.64 | 0.61 | 0.67 | 0.97 |
-| Senti late bert12_mert9 | mismatched | 0.24 | 0.22 | 0.04 | -0.02 | 0.04 |
+| Senti late bert12_mert9 | random mismatch | 0.34 | 0.32 | -0.16 | -0.22 | -0.57 |
+| Senti late bert12_mert9 | same-quadrant mismatch | 0.68 | 0.63 | 0.61 | 0.67 | 0.98 |
 | Senti late bert12_mert12 | matched | 0.58 | 0.57 | 0.57 | 0.59 | 1.00 |
-| Senti late bert12_mert12 | mismatched | 0.13 | 0.30 | -0.03 | -0.01 | -0.09 |
+| Senti late bert12_mert12 | random mismatch | 0.28 | 0.33 | -0.01 | 0.07 | 0.11 |
+| Senti late bert12_mert12 | same-quadrant mismatch | 0.65 | 0.56 | 0.52 | 0.63 | 0.96 |
 
 **arousal**
 
 | model / layer | pairing | lyrics→lyrics | audio→audio | lyrics→audio | audio→lyrics | independence |
 |---|---|---|---|---|---|---|
 | mid fusion L0 | matched | 0.60 ± 0.00 | 0.73 ± 0.01 | 0.73 ± 0.01 | 0.61 ± 0.00 | 1.00 ± 0.00 |
-| mid fusion L0 | mismatched | 0.21 ± 0.12 | 0.41 ± 0.08 | 0.10 ± 0.18 | 0.08 ± 0.06 | 0.43 ± 0.00 |
+| mid fusion L0 | random mismatch | 0.21 ± 0.12 | 0.41 ± 0.08 | 0.10 ± 0.18 | 0.08 ± 0.06 | 0.43 ± 0.00 |
+| mid fusion L0 | same-quadrant mismatch | 0.57 ± 0.02 | 0.72 ± 0.01 | 0.71 ± 0.02 | 0.58 ± 0.01 | 1.00 ± 0.00 |
 | mid fusion L1 | matched | 0.57 ± 0.01 | 0.75 ± 0.00 | 0.74 ± 0.01 | 0.58 ± 0.01 | 1.00 ± 0.00 |
-| mid fusion L1 | mismatched | 0.25 ± 0.05 | 0.36 ± 0.07 | 0.14 ± 0.04 | 0.07 ± 0.05 | 0.37 ± 0.10 |
+| mid fusion L1 | random mismatch | 0.28 ± 0.04 | 0.40 ± 0.03 | 0.04 ± 0.01 | -0.02 ± 0.13 | 0.02 ± 0.21 |
+| mid fusion L1 | same-quadrant mismatch | 0.57 ± 0.00 | 0.75 ± 0.00 | 0.74 ± 0.00 | 0.57 ± 0.01 | 1.00 ± 0.01 |
 | mid fusion L2 | matched | 0.58 ± 0.01 | 0.75 ± 0.00 | 0.74 ± 0.01 | 0.59 ± 0.01 | 1.01 ± 0.00 |
-| mid fusion L2 | mismatched | 0.19 ± 0.06 | 0.37 ± 0.04 | 0.02 ± 0.05 | 0.04 ± 0.03 | 0.17 ± 0.19 |
+| mid fusion L2 | random mismatch | 0.26 ± 0.05 | 0.45 ± 0.05 | -0.15 ± 0.10 | -0.05 ± 0.07 | -0.29 ± 0.28 |
+| mid fusion L2 | same-quadrant mismatch | 0.56 ± 0.01 | 0.74 ± 0.01 | 0.74 ± 0.00 | 0.55 ± 0.01 | 1.00 ± 0.00 |
 | Senti late bert0_mert0 | matched | 0.53 | 0.65 | 0.65 | 0.50 | 0.98 |
-| Senti late bert0_mert0 | mismatched | 0.28 | 0.18 | -0.09 | -0.06 | -0.37 |
+| Senti late bert0_mert0 | random mismatch | 0.28 | 0.18 | -0.09 | -0.06 | -0.37 |
+| Senti late bert0_mert0 | same-quadrant mismatch | 0.53 | 0.67 | 0.65 | 0.52 | 0.99 |
 | Senti late bert0_mert3 | matched | 0.54 | 0.69 | 0.68 | 0.53 | 0.99 |
-| Senti late bert0_mert3 | mismatched | 0.31 | 0.38 | -0.10 | -0.08 | -0.27 |
+| Senti late bert0_mert3 | random mismatch | 0.24 | 0.22 | 0.08 | 0.10 | 0.39 |
+| Senti late bert0_mert3 | same-quadrant mismatch | 0.52 | 0.68 | 0.68 | 0.50 | 0.99 |
 | Senti late bert0_mert6 | matched | 0.55 | 0.73 | 0.72 | 0.53 | 0.98 |
-| Senti late bert0_mert6 | mismatched | 0.30 | 0.31 | 0.11 | 0.13 | 0.39 |
+| Senti late bert0_mert6 | random mismatch | 0.21 | 0.41 | 0.01 | -0.12 | -0.29 |
+| Senti late bert0_mert6 | same-quadrant mismatch | 0.52 | 0.70 | 0.67 | 0.52 | 0.97 |
 | Senti late bert0_mert9 | matched | 0.54 | 0.71 | 0.72 | 0.53 | 0.99 |
-| Senti late bert0_mert9 | mismatched | 0.30 | 0.32 | -0.03 | -0.06 | -0.16 |
+| Senti late bert0_mert9 | random mismatch | 0.26 | 0.37 | 0.12 | 0.11 | 0.37 |
+| Senti late bert0_mert9 | same-quadrant mismatch | 0.51 | 0.63 | 0.62 | 0.50 | 0.99 |
 | Senti late bert0_mert12 | matched | 0.56 | 0.65 | 0.65 | 0.55 | 0.98 |
-| Senti late bert0_mert12 | mismatched | 0.28 | 0.40 | 0.12 | 0.03 | 0.20 |
+| Senti late bert0_mert12 | random mismatch | 0.27 | 0.23 | -0.12 | 0.09 | -0.10 |
+| Senti late bert0_mert12 | same-quadrant mismatch | 0.52 | 0.65 | 0.64 | 0.52 | 1.00 |
 | Senti late bert4_mert0 | matched | 0.60 | 0.66 | 0.65 | 0.56 | 0.96 |
-| Senti late bert4_mert0 | mismatched | 0.27 | 0.39 | -0.13 | -0.23 | -0.61 |
+| Senti late bert4_mert0 | random mismatch | 0.23 | 0.34 | 0.05 | -0.04 | -0.02 |
+| Senti late bert4_mert0 | same-quadrant mismatch | 0.55 | 0.68 | 0.66 | 0.56 | 0.99 |
 | Senti late bert4_mert3 | matched | 0.60 | 0.69 | 0.68 | 0.57 | 0.97 |
-| Senti late bert4_mert3 | mismatched | 0.25 | 0.35 | -0.02 | -0.14 | -0.31 |
+| Senti late bert4_mert3 | random mismatch | 0.33 | 0.19 | -0.05 | 0.04 | -0.07 |
+| Senti late bert4_mert3 | same-quadrant mismatch | 0.58 | 0.69 | 0.68 | 0.56 | 0.98 |
 | Senti late bert4_mert6 | matched | 0.60 | 0.73 | 0.72 | 0.59 | 0.98 |
-| Senti late bert4_mert6 | mismatched | 0.33 | 0.34 | 0.01 | -0.04 | -0.05 |
+| Senti late bert4_mert6 | random mismatch | 0.11 | 0.30 | -0.04 | 0.04 | 0.13 |
+| Senti late bert4_mert6 | same-quadrant mismatch | 0.58 | 0.71 | 0.71 | 0.57 | 0.99 |
 | Senti late bert4_mert9 | matched | 0.60 | 0.69 | 0.70 | 0.59 | 0.99 |
-| Senti late bert4_mert9 | mismatched | 0.30 | 0.41 | 0.03 | 0.00 | 0.03 |
+| Senti late bert4_mert9 | random mismatch | 0.22 | 0.43 | -0.06 | -0.06 | -0.21 |
+| Senti late bert4_mert9 | same-quadrant mismatch | 0.58 | 0.70 | 0.68 | 0.55 | 0.96 |
 | Senti late bert4_mert12 | matched | 0.61 | 0.66 | 0.65 | 0.58 | 0.97 |
-| Senti late bert4_mert12 | mismatched | 0.40 | 0.35 | -0.11 | -0.19 | -0.39 |
+| Senti late bert4_mert12 | random mismatch | 0.23 | 0.29 | 0.02 | -0.11 | -0.21 |
+| Senti late bert4_mert12 | same-quadrant mismatch | 0.54 | 0.64 | 0.64 | 0.53 | 0.99 |
 | Senti late bert8_mert0 | matched | 0.58 | 0.67 | 0.66 | 0.57 | 0.99 |
-| Senti late bert8_mert0 | mismatched | 0.29 | 0.12 | -0.15 | -0.12 | -0.83 |
+| Senti late bert8_mert0 | random mismatch | 0.24 | 0.38 | 0.11 | 0.13 | 0.42 |
+| Senti late bert8_mert0 | same-quadrant mismatch | 0.55 | 0.69 | 0.69 | 0.54 | 0.99 |
 | Senti late bert8_mert3 | matched | 0.59 | 0.70 | 0.69 | 0.58 | 0.99 |
-| Senti late bert8_mert3 | mismatched | 0.12 | 0.21 | -0.03 | 0.04 | 0.09 |
+| Senti late bert8_mert3 | random mismatch | 0.28 | 0.54 | 0.08 | 0.01 | 0.09 |
+| Senti late bert8_mert3 | same-quadrant mismatch | 0.54 | 0.69 | 0.68 | 0.53 | 0.98 |
 | Senti late bert8_mert6 | matched | 0.58 | 0.73 | 0.72 | 0.57 | 0.99 |
-| Senti late bert8_mert6 | mismatched | 0.24 | 0.46 | 0.12 | -0.09 | -0.05 |
+| Senti late bert8_mert6 | random mismatch | 0.35 | 0.43 | -0.14 | -0.16 | -0.40 |
+| Senti late bert8_mert6 | same-quadrant mismatch | 0.56 | 0.72 | 0.70 | 0.55 | 0.98 |
 | Senti late bert8_mert9 | matched | 0.59 | 0.70 | 0.70 | 0.58 | 0.99 |
-| Senti late bert8_mert9 | mismatched | 0.37 | 0.40 | 0.17 | 0.11 | 0.37 |
+| Senti late bert8_mert9 | random mismatch | 0.37 | 0.37 | -0.29 | -0.23 | -0.71 |
+| Senti late bert8_mert9 | same-quadrant mismatch | 0.55 | 0.71 | 0.68 | 0.55 | 0.98 |
 | Senti late bert8_mert12 | matched | 0.57 | 0.67 | 0.66 | 0.58 | 1.00 |
-| Senti late bert8_mert12 | mismatched | 0.21 | 0.21 | 0.09 | 0.10 | 0.44 |
+| Senti late bert8_mert12 | random mismatch | 0.29 | 0.38 | -0.16 | -0.07 | -0.32 |
+| Senti late bert8_mert12 | same-quadrant mismatch | 0.53 | 0.66 | 0.64 | 0.52 | 0.98 |
 | Senti late bert12_mert0 | matched | 0.61 | 0.68 | 0.69 | 0.62 | 1.01 |
-| Senti late bert12_mert0 | mismatched | 0.27 | 0.37 | 0.11 | 0.11 | 0.35 |
+| Senti late bert12_mert0 | random mismatch | 0.34 | 0.26 | 0.08 | 0.19 | 0.44 |
+| Senti late bert12_mert0 | same-quadrant mismatch | 0.61 | 0.67 | 0.67 | 0.61 | 1.00 |
 | Senti late bert12_mert3 | matched | 0.62 | 0.72 | 0.72 | 0.63 | 1.00 |
-| Senti late bert12_mert3 | mismatched | 0.34 | 0.32 | -0.08 | -0.09 | -0.25 |
+| Senti late bert12_mert3 | random mismatch | 0.19 | 0.39 | 0.08 | -0.05 | -0.02 |
+| Senti late bert12_mert3 | same-quadrant mismatch | 0.60 | 0.70 | 0.70 | 0.60 | 1.00 |
 | Senti late bert12_mert6 | matched | 0.62 | 0.74 | 0.74 | 0.63 | 1.01 |
-| Senti late bert12_mert6 | mismatched | 0.33 | 0.26 | 0.09 | 0.01 | 0.19 |
+| Senti late bert12_mert6 | random mismatch | 0.23 | 0.49 | 0.28 | 0.07 | 0.44 |
+| Senti late bert12_mert6 | same-quadrant mismatch | 0.58 | 0.72 | 0.70 | 0.57 | 0.98 |
 | Senti late bert12_mert9 | matched | 0.62 | 0.71 | 0.71 | 0.63 | 1.01 |
-| Senti late bert12_mert9 | mismatched | 0.16 | 0.38 | -0.14 | 0.02 | -0.14 |
+| Senti late bert12_mert9 | random mismatch | 0.18 | 0.26 | -0.13 | -0.00 | -0.27 |
+| Senti late bert12_mert9 | same-quadrant mismatch | 0.58 | 0.71 | 0.69 | 0.58 | 0.99 |
 | Senti late bert12_mert12 | matched | 0.62 | 0.68 | 0.68 | 0.63 | 1.01 |
-| Senti late bert12_mert12 | mismatched | 0.31 | 0.39 | -0.10 | -0.05 | -0.21 |
+| Senti late bert12_mert12 | random mismatch | 0.29 | 0.36 | 0.04 | 0.04 | 0.13 |
+| Senti late bert12_mert12 | same-quadrant mismatch | 0.57 | 0.65 | 0.65 | 0.58 | 1.01 |
 
 ## Intervention on the shared valence direction (after fusion layer 1)
 
