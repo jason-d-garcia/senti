@@ -22,6 +22,8 @@ Steps, all on Modal; the Mac only launches them and saves numbers:
 
     modal run research/modal_crossmodal.py --lyrics ~/Downloads/va_lyrics.csv [--trial]
 
+--cv: phase 1b, 5-fold cross-validation over every MERGE song with audio, with random and same-quadrant
+mismatched-pair controls (writes research/results/phase1b_cv_*). Combine with --trial for a 1-fold, 2-epoch check.
 --trial: 1 seed, 2 epochs, fewer bootstrap samples: a cheap end-to-end check once activations are cached.
 Writes research/results/: phase1_results.json, phase1_report.md, phase1_test_predictions.csv.
 No lyrics or audio are written anywhere; only activations (on the Modal volume) and numbers.
@@ -111,7 +113,18 @@ def cca_align(Xt_tr, Xa_tr, Xt_te, Xa_te, n_pca=64, n_cca=16, perm=None):
     return Tc_tr, Ac_tr, Tc_te, Ac_te
 
 
-def layer_analysis(Xt_tr, Xa_tr, Xt_te, Xa_te, Y_tr, Y_te, n_boot, rng, shared_space=True):
+def mismatch_perm(quads, rng, same_quadrant):
+    """A pairing where no song is paired with itself: random, or with another song of the same quadrant."""
+    import numpy as np
+    n = len(quads); perm = np.arange(n)
+    groups = [np.flatnonzero(np.asarray(quads) == q) for q in sorted(set(quads))] if same_quadrant else [np.arange(n)]
+    for g in groups:
+        if len(g) < 2: continue
+        s = rng.permutation(g); perm[s] = np.roll(s, 1)       # a cycle through the shuffled group: no fixed points
+    return perm
+
+
+def layer_analysis(Xt_tr, Xa_tr, Xt_te, Xa_te, Y_tr, Y_te, n_boot, rng, shared_space=True, quads_tr=None):
     out = {}
     if shared_space:
         out["raw"] = {t: transfer_block(Xt_tr, Xa_tr, Xt_te, Xa_te, Y_tr[:, j], Y_te[:, j], n_boot, rng)
@@ -122,6 +135,10 @@ def layer_analysis(Xt_tr, Xa_tr, Xt_te, Xa_te, Y_tr, Y_te, n_boot, rng, shared_s
     c = cca_align(Xt_tr, Xa_tr, Xt_te, Xa_te, perm=rng.permutation(len(Xt_tr)))
     out["cca_mismatch"] = {t: transfer_block(*c, Y_tr[:, j], Y_te[:, j], n_boot, rng)
                            for j, t in enumerate(["valence", "arousal"])}
+    if quads_tr is not None:   # stricter control: pair with another song from the same emotion quadrant
+        c = cca_align(Xt_tr, Xa_tr, Xt_te, Xa_te, perm=mismatch_perm(quads_tr, rng, True))
+        out["cca_mismatch_quadrant"] = {t: transfer_block(*c, Y_tr[:, j], Y_te[:, j], n_boot, rng)
+                                        for j, t in enumerate(["valence", "arousal"])}
     return out
 
 
@@ -239,7 +256,9 @@ def run_fusion(data: dict, seed: int, cfg: dict, dev, conflict_keys: list[str]) 
         acts = {(s, m): run(net, s, m)[1] for s in ["train", "test"] for m in ["text", "audio"]}
         probes[name] = [layer_analysis(acts[("train", "text")][l], acts[("train", "audio")][l],
                                        acts[("test", "text")][l], acts[("test", "audio")][l],
-                                       Y["train"], Y["test"], n_boot if name == "trained" else 0, rng)
+                                       Y["train"], Y["test"], n_boot if name == "trained" else 0, rng,
+                                       quads_tr=[r["quadrant"] for r in data["train"]["rows"]]
+                                       if cfg.get("controls") else None)
                         for l in range(len(acts[("train", "text")]))]
 
     # ---- intervention on the shared valence direction after fusion layer 1 (index 0), all token positions
@@ -461,6 +480,186 @@ def summarise(late_res: dict, fuse_res: list[dict], senti_preds_csv: bytes, conf
             "best_val": [f["best_val"] for f in fuse_res], "preds_csv": preds_csv}
 
 
+# ================================================================ 5-fold cross-validation over all MERGE songs with audio
+
+CV_K = 5
+LATE_PAIRS = [(0, 0), (4, 3), (8, 6), (12, 6), (12, 12)]     # (BERT layer, MERT layer) pairs for the late-fusion probes
+
+
+def pooled_all(keys):
+    import numpy as np
+    parts = [load_split(s, keys) for s in ["train", "val", "test"]]
+    data = {k: np.concatenate([p[k] for p in parts]) for k in keys}
+    data["rows"] = sum((p["rows"] for p in parts), [])
+    return data
+
+
+def cv_indices(rows, fold):
+    """Outer fold `fold` of a stratified 5-fold split; inner validation = 10% of the training part."""
+    import numpy as np
+    from sklearn.model_selection import StratifiedKFold, train_test_split
+    q = np.array([r["quadrant"] for r in rows])
+    tr, te = list(StratifiedKFold(CV_K, shuffle=True, random_state=SEED).split(q, q))[fold]
+    tr, va = train_test_split(tr, test_size=0.1, random_state=SEED, stratify=q[tr])
+    return tr, va, te
+
+
+def take(data, idx):
+    return {**{k: v[idx] for k, v in data.items() if k != "rows"}, "rows": [data["rows"][i] for i in idx]}
+
+
+@app.function(gpu="T4", volumes=V, memory=32768, timeout=3600)
+def fuse_cv(fold: int, cfg: dict) -> dict:
+    import torch
+    data = pooled_all(["text_tok", "text_mask", "audio_seq", "audio_mask"])
+    tr, va, te = cv_indices(data["rows"], fold)
+    split = {"train": take(data, tr), "val": take(data, va), "test": take(data, te)}
+    return run_fusion(split, fold, cfg, torch.device("cuda"), [])
+
+
+@app.function(volumes=V, cpu=8, memory=16384, timeout=3600)
+def late_cv(fold: int) -> dict:
+    """Senti-style late fusion refitted on this fold (ridge on BERT layer 12 and on MERT layer 6, blend fitted on
+    the inner validation songs), plus CCA probe transfer with the mismatched-pair controls."""
+    import numpy as np
+    from sklearn.linear_model import LinearRegression
+    data = pooled_all(["text_pool", "audio_pool"])
+    tr, va, te = cv_indices(data["rows"], fold)
+    rows = data["rows"]; rng = np.random.default_rng(fold)
+    Y = np.array([[r["valence"], r["arousal"]] for r in rows])
+    T = {l: data["text_pool"][:, l].astype(np.float32) for l in {b for b, _ in LATE_PAIRS}}
+    A = {l: data["audio_pool"][:, l].astype(np.float32) for l in {m for _, m in LATE_PAIRS}}
+    preds = {}
+    for j, t in enumerate(["valence", "arousal"]):
+        pt, pa = fit_probe(T[12][tr], Y[tr, j]), fit_probe(A[6][tr], Y[tr, j])
+        blend = LinearRegression().fit(np.c_[pt.predict(T[12][va]), pa.predict(A[6][va])], Y[va, j])
+        lt, la = pt.predict(T[12][te]), pa.predict(A[6][te])
+        preds[t] = {"lyrics": lt.tolist(), "audio": la.tolist(), "late": blend.predict(np.c_[lt, la]).tolist()}
+    quads = [rows[i]["quadrant"] for i in tr]
+    grid = {f"bert{b}_mert{m}": layer_analysis(T[b][tr], A[m][tr], T[b][te], A[m][te], Y[tr], Y[te], 0, rng,
+                                               shared_space=False, quads_tr=quads)
+            for b, m in LATE_PAIRS}
+    return {"fold": fold, "grid": grid, "preds": preds,
+            "keys": [f'{rows[i]["title"]}|{rows[i]["artist"]}' for i in te],
+            "y": Y[te].tolist(), "quadrant": [rows[i]["quadrant"] for i in te]}
+
+
+@app.function(cpu=2, timeout=900)
+def summarise_cv(late_res: list[dict], fuse_res: list[dict]) -> dict:
+    import numpy as np
+
+    def ms(vals):
+        v = [x for x in vals if x is not None]
+        return None if not v else [float(np.mean(v)), float(np.std(v))]
+
+    METRICS = ["within_text", "within_audio", "text_to_audio", "audio_to_text", "shuffled_text_to_audio",
+               "independence"]
+    probes = {}
+    n_layers = len(fuse_res[0]["probes"]["trained"])
+    for net in ["trained", "untrained"]:
+        for space in fuse_res[0]["probes"][net][0]:
+            for t in ["valence", "arousal"]:
+                for l in range(n_layers):
+                    blk = [f["probes"][net][l][space][t] for f in fuse_res]
+                    probes[f"mid {net}|{space}|{t}|L{l}"] = {k: ms([b[k] for b in blk]) for k in METRICS}
+    for pair in late_res[0]["grid"]:
+        for space in late_res[0]["grid"][pair]:
+            for t in ["valence", "arousal"]:
+                blk = [f["grid"][pair][space][t] for f in late_res]
+                probes[f"late {pair}|{space}|{t}"] = {k: ms([b[k] for b in blk]) for k in METRICS}
+    interv = {}
+    for mode in ["both", "text", "audio"]:
+        for kind in ["ablate_valence_dir", "ablate_random_mean", "steer_plus2", "steer_minus2"]:
+            interv[f"{mode}|{kind}"] = {k: ms([f["intervention"][mode][kind][k] for f in fuse_res])
+                                        for k in fuse_res[0]["intervention"][mode][kind]}
+
+    # out-of-fold predictions for every song, matched by key
+    P = {}
+    for lr in late_res:
+        for i, k in enumerate(lr["keys"]):
+            P[k] = {"y_v": lr["y"][i][0], "y_a": lr["y"][i][1], "quadrant": lr["quadrant"][i],
+                    **{f"{src}_{t[0]}": lr["preds"][t][src][i] for t in ["valence", "arousal"]
+                       for src in ["lyrics", "audio", "late"]}}
+    for fr in fuse_res:
+        for i, k in enumerate(fr["test_keys"]):
+            for m in ["both", "text", "audio"]:
+                P[k][f"mid_{m}_v"], P[k][f"mid_{m}_a"] = fr["test_preds"][m][i]
+    keys = sorted(P)
+    col = lambda c: np.array([P[k][c] for k in keys])
+    gap = np.abs(col("lyrics_v") - col("audio_v"))
+    conflict = gap >= np.quantile(gap, 0.75)          # top quarter: lyrics-only and audio-only valence disagree most
+    models = {"lyrics only (ridge, BERT L12)": "lyrics", "audio only (ridge, MERT L6)": "audio",
+              "late fusion (Senti-style blend)": "late", "mid fusion, both": "mid_both",
+              "mid fusion, lyrics only": "mid_text", "mid fusion, audio only": "mid_audio"}
+    rng = np.random.default_rng(0)
+
+    def r(a, b): return float(np.corrcoef(a, b)[0, 1])
+
+    def table(mask):
+        out = {"n": int(mask.sum())}
+        for name, c in models.items():
+            for t in ["v", "a"]:
+                p, y = col(f"{c}_{t}")[mask], col(f"y_{t}")[mask]
+                out.setdefault(name, {})[f"{'valence' if t == 'v' else 'arousal'}_r"] = r(p, y)
+                out[name][f"{'valence' if t == 'v' else 'arousal'}_mae"] = float(np.abs(p - y).mean())
+        # paired bootstrap: late fusion minus mid fusion, valence r
+        p1, p2, y = col("late_v")[mask], col("mid_both_v")[mask], col("y_v")[mask]
+        d = []
+        for _ in range(2000):
+            i = rng.integers(0, len(y), len(y)); d.append(r(p1[i], y[i]) - r(p2[i], y[i]))
+        out["late_minus_mid_valence_r"] = [r(p1, y) - r(p2, y), float(np.percentile(d, 2.5)),
+                                           float(np.percentile(d, 97.5))]
+        return out
+
+    compare = {"all": table(np.ones(len(keys), bool)), "conflict": table(conflict)}
+    csv_lines = ["title_artist,quadrant,valence,arousal,conflict," + ",".join(
+        f"{c}_{t}" for c in models.values() for t in ["v", "a"])]
+    for i, k in enumerate(keys):
+        csv_lines.append(",".join([f'"{k}"', P[k]["quadrant"], f'{P[k]["y_v"]:.4f}', f'{P[k]["y_a"]:.4f}',
+                                   str(bool(conflict[i]))] +
+                                  [f'{P[k][f"{c}_{t}"]:.4f}' for c in models.values() for t in ["v", "a"]]))
+    return {"probes": probes, "intervention": interv, "compare": compare, "n_songs": len(keys),
+            "best_val": [f["best_val"] for f in fuse_res], "preds_csv": "\n".join(csv_lines) + "\n"}
+
+
+def report_cv_md(S: dict, cfg: dict) -> str:
+    L = [f"# Phase 1b: 5-fold cross-validation with mismatched-pair controls\n\n"
+         f"{S['n_songs']} MERGE songs with audio, each predicted once out of fold (stratified 5-fold; 10% of each "
+         f"training part held out for early stopping and the late-fusion blend). Probe numbers are mean ± sd over "
+         f"the 5 folds. Config: {cfg}\n",
+         "Controls: **cca** fits the label-free alignment on each song's own lyrics/audio pair; **cca_mismatch** on "
+         "random other songs; **cca_mismatch_quadrant** on another song from the same emotion quadrant. If the "
+         "aligned transfer stays high under the quadrant-matched mismatch, the alignment is driven by the labels, "
+         "not by song-specific shared content.\n"]
+    for t in ["valence", "arousal"]:
+        L.append(f"\n## Probe transfer, {t}\n\n| model / space / layer | lyrics→lyrics | audio→audio | lyrics→audio | "
+                 f"audio→lyrics | shuffled | independence |\n|---|---|---|---|---|---|---|")
+        for k, v in S["probes"].items():
+            name, space, tt, *layer = k.split("|")
+            if tt != t: continue
+            L.append(f"| {name} / {space}{' / ' + layer[0] if layer else ''} | {fmt(v['within_text'])} | "
+                     f"{fmt(v['within_audio'])} | {fmt(v['text_to_audio'])} | {fmt(v['audio_to_text'])} | "
+                     f"{fmt(v['shuffled_text_to_audio'])} | {fmt(v['independence'])} |")
+    L.append("\n## Intervention on the shared valence direction (after fusion layer 1), mean ± sd over folds\n")
+    L.append("| input | edit | valence r | arousal r | mean abs Δvalence | mean abs Δarousal | mean Δvalence |\n"
+             "|---|---|---|---|---|---|---|")
+    for k, v in S["intervention"].items():
+        mode, kind = k.split("|")
+        L.append(f"| {mode} | {kind} | {fmt(v['valence_r'])} | {fmt(v['arousal_r'])} | {fmt(v['mean_abs_dv'], 3)} | "
+                 f"{fmt(v['mean_abs_da'], 3)} | {fmt(v['mean_dv'], 3)} |")
+    for part in ["all", "conflict"]:
+        c = S["compare"][part]
+        d = c["late_minus_mid_valence_r"]
+        L.append(f"\n## Out-of-fold prediction quality: {part} songs (n = {c['n']})\n\n"
+                 f"Late minus mid fusion, valence r: {d[0]:+.3f} (95% CI {d[1]:+.3f} to {d[2]:+.3f}, paired bootstrap)\n\n"
+                 f"| model | valence r | valence MAE | arousal r | arousal MAE |\n|---|---|---|---|---|")
+        for name, v in c.items():
+            if isinstance(v, dict):
+                L.append(f"| {name} | {fmt(v['valence_r'])} | {fmt(v['valence_mae'], 3)} | {fmt(v['arousal_r'])} | "
+                         f"{fmt(v['arousal_mae'], 3)} |")
+    return "\n".join(L)
+
+
 def fmt(x, nd=2):
     if x is None: return "n/a"
     if isinstance(x, list): return f"{x[0]:.{nd}f} ± {x[1]:.{nd}f}"
@@ -514,12 +713,30 @@ def report_md(S: dict, late_res: dict, cfg: dict, n_seeds: int) -> str:
 
 @app.local_entrypoint()
 def main(lyrics: str, preds: str = "data/finetune/merge_test_predictions.csv", out: str = "research/results",
-         trial: bool = False, seeds: int = 3):
+         trial: bool = False, seeds: int = 3, cv: bool = False):
     import csv
     import json
     import os
     os.makedirs(out, exist_ok=True)
     print("extract:", extract.remote(open(os.path.expanduser(lyrics), "rb").read()))
+
+    if cv:   # phase 1b: 5-fold CV over every MERGE song with audio, with the mismatched-pair controls
+        cfg = {"d": 256, "layers": 2, "lr": 3e-4, "epochs": 2 if trial else 40, "p_drop": 0.25, "n_boot": 0,
+               "n_rand": 5 if trial else 20, "edit_layer": 0, "controls": True}
+        n_folds = 1 if trial else CV_K
+        late_calls = [late_cv.spawn(f) for f in range(n_folds)]
+        fuse_res = list(fuse_cv.starmap([(f, cfg) for f in range(n_folds)]))
+        late_res = [c.get() for c in late_calls]
+        S = summarise_cv.remote(late_res, fuse_res)
+        tag = "_trial" if trial else ""
+        open(f"{out}/phase1b_cv_predictions{tag}.csv", "w").write(S.pop("preds_csv"))
+        json.dump({"cfg": cfg, "summary": S, "late_per_fold": late_res,
+                   "fuse_per_fold": [{k: v for k, v in f.items() if k not in ("test_preds", "test_keys")}
+                                     for f in fuse_res]}, open(f"{out}/phase1b_cv_results{tag}.json", "w"), indent=1)
+        md = report_cv_md(S, cfg)
+        open(f"{out}/phase1b_cv_report{tag}.md", "w").write(md)
+        print(md)
+        return
 
     # conflict songs: top quarter of |lyrics-only valence - audio-only valence| among Senti's test predictions
     rows = list(csv.DictReader(open(preds)))
