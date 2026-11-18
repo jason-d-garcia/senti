@@ -22,7 +22,9 @@ Steps, all on Modal; the Mac only launches them and saves numbers:
 
     modal run research/modal_crossmodal.py --lyrics ~/Downloads/va_lyrics.csv [--trial]
 
---cv: phase 1b, 5-fold cross-validation over every MERGE song with audio, with random and same-quadrant
+--cv: CAUTION, leaky for lyrics: Senti's fine-tuned BERT was trained on the original MERGE training songs, so
+lyrics numbers are inflated out of fold (0.90 vs 0.72). Needs per-fold BERT fine-tunes before use.
+Phase 1b, 5-fold cross-validation over every MERGE song with audio, with random and same-quadrant
 mismatched-pair controls (writes research/results/phase1b_cv_*). Combine with --trial for a 1-fold, 2-epoch check.
 --trial: 1 seed, 2 epochs, fewer bootstrap samples: a cheap end-to-end check once activations are cached.
 Writes research/results/: phase1_results.json, phase1_report.md, phase1_test_predictions.csv.
@@ -410,7 +412,8 @@ def late(n_boot: int, bert_layers: list[int], mert_layers: list[int]) -> dict:
             grid[f"bert{b}_mert{m}"] = layer_analysis(
                 tr["text_pool"][:, b].astype(np.float32), tr["audio_pool"][:, m].astype(np.float32),
                 te["text_pool"][:, b].astype(np.float32), te["audio_pool"][:, m].astype(np.float32),
-                Y["train"], Y["test"], n_boot, rng, shared_space=False)
+                Y["train"], Y["test"], n_boot, rng, shared_space=False,
+                quads_tr=[r["quadrant"] for r in tr["rows"]])
     return grid
 
 
@@ -435,7 +438,7 @@ def summarise(late_res: dict, fuse_res: list[dict], senti_preds_csv: bytes, conf
     n_layers = len(fuse_res[0]["probes"]["trained"])
     fusion_tab = {}
     for net in ["trained", "untrained"]:
-        for space in ["raw", "cca", "cca_mismatch"]:
+        for space in fuse_res[0]["probes"][net][0]:
             for t in ["valence", "arousal"]:
                 for l in range(n_layers):
                     blk = [f["probes"][net][l][space][t] for f in fuse_res]
@@ -472,7 +475,7 @@ def summarise(late_res: dict, fuse_res: list[dict], senti_preds_csv: bytes, conf
     late_sum = {sp: {k: {t: {kk: v[sp][t][kk] for kk in ["within_text", "within_audio", "text_to_audio",
                                                           "audio_to_text", "shuffled_text_to_audio", "independence"]}
                            for t in ["valence", "arousal"]} for k, v in late_res.items()}
-                for sp in ["cca", "cca_mismatch"]}
+                for sp in next(iter(late_res.values()))}
     preds_csv = j[["title", "artist", "quadrant", "valence", "arousal", "conflict", "lyrics_v", "frozen_v",
                    "frozen_fused_v", "mid_v", "mid_a", "mid_text_v", "mid_audio_v"]].to_csv(index=False)
     return {"fusion": fusion_tab, "intervention": interv, "fusion_performance": perf, "late_cca": late_sum,
@@ -687,11 +690,11 @@ def report_md(S: dict, late_res: dict, cfg: dict, n_seeds: int) -> str:
     for t in ["valence", "arousal"]:
         L.append(f"\n**{t}**\n\n| model / layer | pairing | lyrics→lyrics | audio→audio | lyrics→audio | audio→lyrics | independence |\n|---|---|---|---|---|---|---|")
         rows = [(f"mid fusion L{l}", sp, S["fusion"][f"trained|{sp}|{t}|L{l}"]) for l in range(3)
-                for sp in ["cca", "cca_mismatch"]]
+                for sp in S["late_cca"]]
         rows += [(f"Senti late {k}", sp, S["late_cca"][sp][k][t]) for k in S["late_cca"]["cca"]
-                 for sp in ["cca", "cca_mismatch"]]
+                 for sp in S["late_cca"]]
         for name, sp, r in rows:
-            L.append(f"| {name} | {'matched' if sp == 'cca' else 'mismatched'} | {fmt(r['within_text'])} | "
+            L.append(f"| {name} | { {'cca': 'matched', 'cca_mismatch': 'random mismatch', 'cca_mismatch_quadrant': 'same-quadrant mismatch'}[sp]} | {fmt(r['within_text'])} | "
                      f"{fmt(r['within_audio'])} | {fmt(r['text_to_audio'])} | {fmt(r['audio_to_text'])} | "
                      f"{fmt(r['independence'])} |")
     L.append("\n## Intervention on the shared valence direction (after fusion layer 1)\n")
@@ -746,7 +749,7 @@ def main(lyrics: str, preds: str = "data/finetune/merge_test_predictions.csv", o
     print(f"conflict songs: {len(conflict)} (gap ≥ {gaps[len(gaps) // 4 - 1][0]:.2f})")
 
     cfg = {"d": 256, "layers": 2, "lr": 3e-4, "epochs": 2 if trial else 40, "p_drop": 0.25,
-           "n_boot": 100 if trial else 1000, "n_rand": 5 if trial else 20, "edit_layer": 0}
+           "n_boot": 100 if trial else 1000, "n_rand": 5 if trial else 20, "edit_layer": 0, "controls": True}
     n = 1 if trial else seeds
     late_call = late.spawn(cfg["n_boot"], [0, 4, 8, 12], [0, 3, 6, 9, 12])
     fuse_res = list(fuse.starmap([(s, cfg, conflict) for s in range(n)]))
