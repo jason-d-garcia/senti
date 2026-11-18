@@ -93,8 +93,11 @@ def transfer_block(Xt_tr, Xa_tr, Xt_te, Xa_te, y_tr, y_te, n_boot, rng):
             "independence": None if r1 is None or r2 is None else (r1 + r2) / 2}
 
 
-def cca_align(Xt_tr, Xa_tr, Xt_te, Xa_te, n_pca=64, n_cca=16):
-    """Label-free alignment: PCA each side, then CCA fitted on paired training songs."""
+def cca_align(Xt_tr, Xa_tr, Xt_te, Xa_te, n_pca=64, n_cca=16, perm=None):
+    """Label-free alignment: PCA each side, then CCA fitted on paired training songs.
+    perm: mismatched-pair control. The CCA is fitted on lyrics of song i against audio of song perm[i]; the
+    probes are then fitted and tested on correctly paired songs as usual. A real shared space should lose
+    transfer under this control; if it doesn't, the alignment alone manufactures the transfer."""
     from sklearn.cross_decomposition import CCA
     from sklearn.decomposition import PCA
     from sklearn.preprocessing import StandardScaler
@@ -102,7 +105,7 @@ def cca_align(Xt_tr, Xa_tr, Xt_te, Xa_te, n_pca=64, n_cca=16):
     k = min(n_pca, Xt_tr.shape[1], Xa_tr.shape[1], len(Xt_tr) - 1)
     pt, pa = PCA(k, random_state=0).fit(st.transform(Xt_tr)), PCA(k, random_state=0).fit(sa.transform(Xa_tr))
     T_tr, A_tr = pt.transform(st.transform(Xt_tr)), pa.transform(sa.transform(Xa_tr))
-    cca = CCA(n_components=min(n_cca, k), max_iter=2000).fit(T_tr, A_tr)
+    cca = CCA(n_components=min(n_cca, k), max_iter=2000).fit(T_tr, A_tr if perm is None else A_tr[perm])
     Tc_tr, Ac_tr = cca.transform(T_tr, A_tr)
     Tc_te, Ac_te = cca.transform(pt.transform(st.transform(Xt_te)), pa.transform(sa.transform(Xa_te)))
     return Tc_tr, Ac_tr, Tc_te, Ac_te
@@ -116,6 +119,9 @@ def layer_analysis(Xt_tr, Xa_tr, Xt_te, Xa_te, Y_tr, Y_te, n_boot, rng, shared_s
     c = cca_align(Xt_tr, Xa_tr, Xt_te, Xa_te)
     out["cca"] = {t: transfer_block(*c, Y_tr[:, j], Y_te[:, j], n_boot, rng)
                   for j, t in enumerate(["valence", "arousal"])}
+    c = cca_align(Xt_tr, Xa_tr, Xt_te, Xa_te, perm=rng.permutation(len(Xt_tr)))
+    out["cca_mismatch"] = {t: transfer_block(*c, Y_tr[:, j], Y_te[:, j], n_boot, rng)
+                           for j, t in enumerate(["valence", "arousal"])}
     return out
 
 
@@ -410,7 +416,7 @@ def summarise(late_res: dict, fuse_res: list[dict], senti_preds_csv: bytes, conf
     n_layers = len(fuse_res[0]["probes"]["trained"])
     fusion_tab = {}
     for net in ["trained", "untrained"]:
-        for space in ["raw", "cca"]:
+        for space in ["raw", "cca", "cca_mismatch"]:
             for t in ["valence", "arousal"]:
                 for l in range(n_layers):
                     blk = [f["probes"][net][l][space][t] for f in fuse_res]
@@ -444,9 +450,10 @@ def summarise(late_res: dict, fuse_res: list[dict], senti_preds_csv: bytes, conf
         return {name: {"valence_r": float(np.corrcoef(df[c], df["valence"])[0, 1]),
                        "valence_mae": float((df[c] - df["valence"]).abs().mean())} for name, c in cols.items()}
     compare = {"all_test": {"n": len(j), **tab(j)}, "conflict": {"n": int(j["conflict"].sum()), **tab(j[j["conflict"]])}}
-    late_sum = {k: {t: {kk: v[t][kk] for kk in ["within_text", "within_audio", "text_to_audio", "audio_to_text",
-                                                   "shuffled_text_to_audio", "independence"]}
-                       for t in ["valence", "arousal"]} for k, v in ((k, v["cca"]) for k, v in late_res.items())}
+    late_sum = {sp: {k: {t: {kk: v[sp][t][kk] for kk in ["within_text", "within_audio", "text_to_audio",
+                                                          "audio_to_text", "shuffled_text_to_audio", "independence"]}
+                           for t in ["valence", "arousal"]} for k, v in late_res.items()}
+                for sp in ["cca", "cca_mismatch"]}
     preds_csv = j[["title", "artist", "quadrant", "valence", "arousal", "conflict", "lyrics_v", "frozen_v",
                    "frozen_fused_v", "mid_v", "mid_a", "mid_text_v", "mid_audio_v"]].to_csv(index=False)
     return {"fusion": fusion_tab, "intervention": interv, "fusion_performance": perf, "late_cca": late_sum,
@@ -475,14 +482,19 @@ def report_md(S: dict, late_res: dict, cfg: dict, n_seeds: int) -> str:
                                f"{fmt(r['text_to_audio'])} | {fmt(r['audio_to_text'])} | "
                                f"{fmt(r['shuffled_text_to_audio'])} | {fmt(r['independence'])} |")
     L.append("\n## Same, after label-free CCA alignment (comparable with late fusion)\n")
+    L.append("matched = CCA fitted on correctly paired training songs. mismatched = control: CCA fitted on lyrics of one "
+             "song against audio of a random other song; probes still fitted and tested on correct pairs. "
+             "Within-modality r is measured inside the 16-d CCA space, so it can be lower than in the raw space.\n")
     for t in ["valence", "arousal"]:
-        L.append(f"\n**{t}**\n\n| model / layer | lyrics→audio | audio→lyrics | independence |\n|---|---|---|---|")
-        for l in range(3):
-            r = S["fusion"][f"trained|cca|{t}|L{l}"]
-            L.append(f"| mid fusion L{l} | {fmt(r['text_to_audio'])} | {fmt(r['audio_to_text'])} | {fmt(r['independence'])} |")
-        for k, v in S["late_cca"].items():
-            r = v[t]
-            L.append(f"| Senti late {k} | {fmt(r['text_to_audio'])} | {fmt(r['audio_to_text'])} | {fmt(r['independence'])} |")
+        L.append(f"\n**{t}**\n\n| model / layer | pairing | lyrics→lyrics | audio→audio | lyrics→audio | audio→lyrics | independence |\n|---|---|---|---|---|---|---|")
+        rows = [(f"mid fusion L{l}", sp, S["fusion"][f"trained|{sp}|{t}|L{l}"]) for l in range(3)
+                for sp in ["cca", "cca_mismatch"]]
+        rows += [(f"Senti late {k}", sp, S["late_cca"][sp][k][t]) for k in S["late_cca"]["cca"]
+                 for sp in ["cca", "cca_mismatch"]]
+        for name, sp, r in rows:
+            L.append(f"| {name} | {'matched' if sp == 'cca' else 'mismatched'} | {fmt(r['within_text'])} | "
+                     f"{fmt(r['within_audio'])} | {fmt(r['text_to_audio'])} | {fmt(r['audio_to_text'])} | "
+                     f"{fmt(r['independence'])} |")
     L.append("\n## Intervention on the shared valence direction (after fusion layer 1)\n")
     L.append("| input | edit | valence r | arousal r | mean abs Δvalence | mean abs Δarousal | mean Δvalence |\n|---|---|---|---|---|---|---|")
     for k, v in S["intervention"].items():
