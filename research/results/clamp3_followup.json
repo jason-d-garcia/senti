@@ -1,0 +1,182 @@
+{
+ "coverage": {
+  "songs": 2159,
+  "matched_to_metadata": 2153,
+  "with_genre": 2134,
+  "with_year": 2038,
+  "main_genre_counts": {
+   "Pop/Rock": 654,
+   "Electronic": 293,
+   "Country": 248,
+   "Rap": 154,
+   "Blues": 129,
+   "Jazz": 113,
+   "R&B": 100,
+   "International": 63,
+   "Folk": 59,
+   "Holiday": 42,
+   "Reggae": 41,
+   "Easy Listening": 22
+  },
+  "metadata_columns": [
+   "Song",
+   "Quadrant",
+   "AllMusic Id",
+   "AllMusic Extraction Date",
+   "Artist",
+   "Title",
+   "Relevance",
+   "Year",
+   "LowestYear",
+   "Duration",
+   "Moods",
+   "MoodsAll",
+   "MoodsAllWeights",
+   "Genres",
+   "GenreWeights",
+   "Themes",
+   "ThemeWeights",
+   "Styles",
+   "StyleWeights",
+   "AppearancesTrackIDs",
+   "AppearancesAlbumIDs",
+   "Sample",
+   "SampleURL",
+   "ActualYear",
+   "num_Genres",
+   "num_MoodsAll"
+  ]
+ },
+ "all": {
+  "baseline: vs 5 nearest-label": {
+   "n": 2159,
+   "mean": 0.037286800538992484,
+   "ci": [
+    0.03543812129952811,
+    0.03905024500384723
+   ]
+  },
+  "1. vs same-artist songs": {
+   "n": 1448,
+   "mean": 0.01616317381148448,
+   "ci": [
+    0.014226952216135163,
+    0.01821888703151827
+   ]
+  },
+  "2. vs 5 nearest-label, same main genre, year \u00b15, other artists": {
+   "n": 1934,
+   "mean": 0.027044072895548707,
+   "ci": [
+    0.025247083086654788,
+    0.028867940093879902
+   ]
+  },
+  "3a. emotion subspace (2-d prompt dirs)": {
+   "n": 2159,
+   "mean": 0.0020530195304124337,
+   "ci": [
+    0.0016815007562190898,
+    0.0024054771002239373
+   ]
+  },
+  "3b. orthogonal complement": {
+   "n": 2159,
+   "mean": 0.03523378116356907,
+   "ci": [
+    0.033488864977915235,
+    0.03705358112008419
+   ]
+  },
+  "3c. random 2-d subspace (20 draws): mean gap": {
+   "mean": 8.794940837716213e-05,
+   "range": [
+    -2.0218189177178234e-05,
+    0.0002204708930444916
+   ]
+  },
+  "3d. share of baseline gap in emotion subspace": 0.05506021901965141,
+  "4. Spearman(gap, |zero-shot lyrics valence|)": {
+   "n": 2159,
+   "rho": -0.006953844765264218,
+   "ci": [
+    -0.05031401186788051,
+    0.03316200659386642
+   ]
+  },
+  "4. Spearman(gap, |zero-shot lyrics arousal|)": {
+   "n": 2159,
+   "rho": 0.014665334072956475,
+   "ci": [
+    -0.027003881173254564,
+    0.059426388761642586
+   ]
+  }
+ },
+ "test": {
+  "baseline: vs 5 nearest-label": {
+   "n": 206,
+   "mean": 0.04156621552786781,
+   "ci": [
+    0.03558682943287405,
+    0.04724390187382119
+   ]
+  },
+  "1. vs same-artist songs": {
+   "n": 61,
+   "mean": 0.010003256626793595,
+   "ci": [
+    0.002048204307917689,
+    0.018518852529528198
+   ]
+  },
+  "2. vs 5 nearest-label, same main genre, year \u00b15, other artists": {
+   "n": 112,
+   "mean": 0.03521618849065687,
+   "ci": [
+    0.028062264829142286,
+    0.04259288823315208
+   ]
+  },
+  "3a. emotion subspace (2-d prompt dirs)": {
+   "n": 206,
+   "mean": 0.0017492794609053322,
+   "ci": [
+    0.0006571321942440422,
+    0.0028242027308594503
+   ]
+  },
+  "3b. orthogonal complement": {
+   "n": 206,
+   "mean": 0.03981693589933289,
+   "ci": [
+    0.033831105948859845,
+    0.045416305397718564
+   ]
+  },
+  "3c. random 2-d subspace (20 draws): mean gap": {
+   "mean": 0.00011955122735301927,
+   "range": [
+    -0.00011077260484109965,
+    0.00035344538547863336
+   ]
+  },
+  "3d. share of baseline gap in emotion subspace": 0.042084164917469025,
+  "4. Spearman(gap, |zero-shot lyrics valence|)": {
+   "n": 206,
+   "rho": 0.09271724545020883,
+   "ci": [
+    -0.04076962498988631,
+    0.2295965844096856
+   ]
+  },
+  "4. Spearman(gap, |zero-shot lyrics arousal|)": {
+   "n": 206,
+   "rho": 0.06555339310038003,
+   "ci": [
+    -0.08620073447165082,
+    0.20587057834056124
+   ]
+  }
+ }
+}
