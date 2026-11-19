@@ -1,0 +1,189 @@
+{
+ "n": {
+  "train": 1734,
+  "val": 219,
+  "test": 206
+ },
+ "test1": {
+  "valence|zero-shot audio": {
+   "test_r": 0.6343316803263189,
+   "test_ci": [
+    0.550201147900315,
+    0.7082171601619809
+   ],
+   "all_r": 0.6282681107839243
+  },
+  "valence|zero-shot lyrics": {
+   "test_r": 0.6247704344835673,
+   "test_ci": [
+    0.5425583376916812,
+    0.7006527770407089
+   ],
+   "all_r": 0.6063303911794641
+  },
+  "valence|ridge on CLaMP 3 audio": {
+   "test_r": 0.7265593056419049,
+   "test_ci": [
+    0.6639366620671661,
+    0.7813404686302861
+   ],
+   "all_r": null
+  },
+  "valence|ridge on CLaMP 3 lyrics": {
+   "test_r": 0.7549222569853776,
+   "test_ci": [
+    0.6939120206545885,
+    0.8085319090293471
+   ],
+   "all_r": null
+  },
+  "valence|ridge on Senti MERT L6": {
+   "test_r": 0.6832651243968308,
+   "test_ci": [
+    0.6097268336923752,
+    0.750271242898218
+   ],
+   "all_r": null
+  },
+  "arousal|zero-shot audio": {
+   "test_r": 0.5464509496137048,
+   "test_ci": [
+    0.46606059356383245,
+    0.6250210372913724
+   ],
+   "all_r": 0.5492406308909541
+  },
+  "arousal|zero-shot lyrics": {
+   "test_r": 0.53943446220472,
+   "test_ci": [
+    0.44986665320059166,
+    0.6266684363944917
+   ],
+   "all_r": 0.5081705333209372
+  },
+  "arousal|ridge on CLaMP 3 audio": {
+   "test_r": 0.748375502216306,
+   "test_ci": [
+    0.6963598860600733,
+    0.7987218772480537
+   ],
+   "all_r": null
+  },
+  "arousal|ridge on CLaMP 3 lyrics": {
+   "test_r": 0.6610331273463703,
+   "test_ci": [
+    0.5950660651310101,
+    0.7242291019645621
+   ],
+   "all_r": null
+  },
+  "arousal|ridge on Senti MERT L6": {
+   "test_r": 0.7516512067733324,
+   "test_ci": [
+    0.7070603499696655,
+    0.7961936454029701
+   ],
+   "all_r": null
+  }
+ },
+ "test2": {
+  "retrieval_test": {
+   "n": 206,
+   "recall@1": 0.0970873786407767,
+   "recall@10": 0.41262135922330095,
+   "median_rank": 14.5,
+   "chance_recall@1": 0.0048543689320388345,
+   "chance_recall@10": 0.04854368932038835,
+   "chance_median_rank": 103.5
+  },
+  "retrieval_all": {
+   "n": 2159,
+   "recall@1": 0.018527095877721167,
+   "recall@10": 0.10606762389995368,
+   "median_rank": 141.0,
+   "chance_recall@1": 0.0004631773969430292,
+   "chance_recall@10": 0.004631773969430292,
+   "chance_median_rank": 1080.0
+  },
+  "gap_test": {
+   "vs_all_other": [
+    0.06843051314353943,
+    0.063131239451468,
+    0.07416557930409907
+   ],
+   "vs_same_quadrant": [
+    0.04451774060726166,
+    0.03928388739004731,
+    0.049992600549012424
+   ],
+   "vs_5_nearest_label": [
+    0.04122225567698479,
+    0.03539493074640632,
+    0.047012090217322104
+   ],
+   "mean_own_cos": 0.1213650107383728,
+   "mean_other_cos": 0.05293449014425278
+  },
+  "gap_all": {
+   "vs_all_other": [
+    0.06808629631996155,
+    0.06616860274225474,
+    0.0698393601924181
+   ],
+   "vs_same_quadrant": [
+    0.046003252267837524,
+    0.0443738522939384,
+    0.04762299172580242
+   ],
+   "vs_5_nearest_label": [
+    0.03716085106134415,
+    0.03532037865370512,
+    0.03890961799770594
+   ],
+   "mean_own_cos": 0.11767291277647018,
+   "mean_other_cos": 0.04958663135766983
+  },
+  "probe_transfer": {
+   "valence": {
+    "lyrics\u2192lyrics": 0.7549222569853776,
+    "audio\u2192audio": 0.7265593056419049,
+    "lyrics\u2192audio": 0.43199131521680406,
+    "audio\u2192lyrics": 0.6489573862110226
+   },
+   "arousal": {
+    "lyrics\u2192lyrics": 0.6610331273463703,
+    "audio\u2192audio": 0.748375502216306,
+    "lyrics\u2192audio": 0.6265385571508113,
+    "audio\u2192lyrics": 0.49137075060207464
+   }
+  }
+ },
+ "test3": {
+  "map_alpha": 316.22776601683796,
+  "map_test_r2": 0.6613018827514984,
+  "valence": {
+   "cos(pulled-back prompt dir, Senti head)": 0.5657824872518058,
+   "random |cos| 95th pct": 0.06694489493839981,
+   "base_r": 0.6832651243968308,
+   "ablate prompt dir: mean |\u0394pred|": 0.14006129373282303,
+   "ablate prompt dir: \u0394r": -0.09173613789789259,
+   "ablate random (20): mean |\u0394pred|": 0.0029455983459276084,
+   "ablate random (20): max |\u0394pred|": 0.007964908140604974,
+   "ablate random (20): mean \u0394r": 6.904246423198313e-05,
+   "ablate head's own dir (reference): mean |\u0394pred|": 0.25024042590342777,
+   "ablate head's own dir: \u0394r": -0.6832651243968308
+  },
+  "arousal": {
+   "cos(pulled-back prompt dir, Senti head)": 0.16515493516730584,
+   "random |cos| 95th pct": 0.07116753654780852,
+   "base_r": 0.7516512067733324,
+   "ablate prompt dir: mean |\u0394pred|": 0.03791155000438478,
+   "ablate prompt dir: \u0394r": -0.01025735695699237,
+   "ablate random (20): mean |\u0394pred|": 0.0015308908247780276,
+   "ablate random (20): max |\u0394pred|": 0.003511759798734158,
+   "ablate random (20): mean \u0394r": 9.619948096936115e-05,
+   "ablate head's own dir (reference): mean |\u0394pred|": 0.16848337715651307,
+   "ablate head's own dir: \u0394r": -0.7516512067733324
+  }
+ }
+}
